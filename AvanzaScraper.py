@@ -342,6 +342,7 @@ def initiatePortfolio():
     summary = df_map.get("Potfolio Summary", None)
     return Portfolio(stocks, funds, etfs, certif, summary)
 
+
 if __name__ == '__main__':
 
     login_url = 'https://www.avanza.se/start/startsidan.html(right-overlay:login/login-overlay)'
@@ -360,6 +361,8 @@ if __name__ == '__main__':
     # use old data
     html = Utils.readTxtFile('htmlAvanza')
 
+
+    
     # run 
     dataframes = parseHTML(html)
 
@@ -368,6 +371,6 @@ if __name__ == '__main__':
     portfolio = initiatePortfolio()
     portfolio.checkRules()
     portfolio.fundsBreakdown() 
-    # portfolio.scrapeNasdaq()
-    # portfolio.saveStockInfoToExcel()
-    portfolio.readStockInfoFromExcel('Kindred Group')
+    # # portfolio.scrapeNasdaq()
+    # # portfolio.saveStockInfoToExcel()
+    # portfolio.readStockInfoFromExcel('Kindred Group')

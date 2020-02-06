@@ -22,7 +22,7 @@ from selenium.webdriver.common.keys import Keys
 from selenium.common.exceptions import NoSuchElementException, TimeoutException
 from bs4 import BeautifulSoup
 import time
-
+from collections import OrderedDict
 from modules import Excel, Utils
 
 #load .env file 
@@ -77,8 +77,6 @@ class Portfolio:
         self.certificates = c
         self.misc = misc
 
-        
-
     def cleanAndRename(self, stocks, funds, etfs, cert):
         unnecessary_columns = ['Unnamed: 0', '+/- %', 'Konto', 'Senast', 'Tid']
         new_column_names = ['Asset', 'Amount', 'Purchase', 'MarketValue', 'Change', 'Profit']
@@ -127,10 +125,132 @@ class Portfolio:
         elif not( fund_weight + cert_weight <= Portfolio.tot_weight_funds  + allowedFundTargetDeviation):
             print('too much money in funds')
         
+    def parseFundDetailsPage(self, instrument):
+        avanzaGlobal = Utils.readTxtFile(instrument)
+
+        soup = BeautifulSoup(avanzaGlobal, 'lxml')
+        fee = soup.find("h3", attrs= {'data-e2e': 'fon-guide-total-fee'}).text.strip()
+        print('fund fee', fee)
+
+        keyData = soup.find_all('div', {'class': 'border-space-item'})
+
+        keyDataDict = {}
+        for div in keyData:
+            key = div.label.text.strip()
+            span = div.find('span', {'class': 'u-body-text'})
+            if (span != None):
+                value = div.find('span', {'class': 'u-body-text'}).text.strip()
+                keyDataDict[key] = value
+                continue
+            value = div.find('a', {'class': 'u-body-text'}).text.strip()
+            keyDataDict[key] = value
+        keyDataDF = pd.DataFrame(list(keyDataDict.items()))
+
+
+        allocationDataLists = soup.find_all('ul', {'class': 'allocation-list'})
+        # we know there is no country/sector data ie special fund, dont bother returning anything
+        if (len(allocationDataLists) == 1): 
+            # instrumentDict = {}
+            # instrumentAllocations = allocationDataLists[0]
+            # instruments = instrumentAllocations.find_all('span', {'class': 'u-ellipsis'})
+            # percentages = instrumentAllocations.find_all('span', {'class': 'percent'})
+            # instruments = list(set(instruments)) #remove duplicates
+            # for i in range(len(instruments)):
+            #     instrumentDict[instruments[i].text.strip()] = percentages[i].text.strip()
+            # instrumentsDF = pd.DataFrame(list(instrumentDict.items()))
+
+            # return {'key-data': keyDataDF, 'instruments': instrumentsDF}
+            print('special fund, return nothing')
+            return {}
+        else:
+            ## countries and regions
+            countryDict = {}
+            countryAllocations = allocationDataLists[0]
+            countries = countryAllocations.find_all('span', {'class': 'u-ellipsis'})
+            percentages = countryAllocations.find_all('span', {'class': 'percent'})
+            #countries = list(set(countries))
+            for i in range(len(countries)):
+                percentageString = percentages[i].text.strip().replace('%', '').replace(',', '.')
+                percentegeFloat = round(float(percentageString)/100, 4)
+                countryDict[countries[i].text.strip()] = percentegeFloat
+            countryDF  = pd.DataFrame(list(countryDict.items()))
+
+            
+            ## sectors 
+            sectorDict = {}
+            sectorAllocations = allocationDataLists[1]
+            sectors = sectorAllocations.find_all('span', {'class': 'u-ellipsis'})
+            percentages = sectorAllocations.find_all('span', {'class': 'percent'})
+            for i in range(len(sectors)):
+                percentageString = percentages[i].text.strip().replace('%', '').replace(',', '.')
+                percentegeFloat = round(float(percentageString)/100, 4)
+                sectorDict[sectors[i].text.strip()] = percentegeFloat
+            sectorDF = pd.DataFrame(list(sectorDict.items()))
+
+            ## individual stocks
+            stockDict = {}
+            stockAllocations = allocationDataLists[2]
+            stocks = stockAllocations.find_all('span', {'class': 'u-ellipsis'})
+            percentages = stockAllocations.find_all('span', {'class': 'percent'})
+            stocks = list(OrderedDict.fromkeys(stocks)) #remove duplicates
+            c= [c.text.strip() for c in stocks]
+            print(c)
+            p = [p.text.strip() for p in percentages]
+            print(p)
+            for i in range(len(stocks)):
+                percentageString = percentages[i].text.strip().replace('%', '').replace(',', '.').replace('−', '-')
+                percentegeFloat = round(float(percentageString)/100, 4)
+                stockDict[stocks[i].text.strip()] = percentegeFloat
+            stocksDF = pd.DataFrame(list(stockDict.items()))
+
+
+
+            return {'key-data': keyDataDF,'countries': countryDF,'sectors': sectorDF,'instruments': stocksDF}
 
     def fundsBreakdown(self):
         df = self.funds
         Utils.printDf(df)
+        finalSectorAlloc = pd.DataFrame(columns=[0, 1])
+        finalCountryAlloc = pd.DataFrame(columns=[0, 1])
+        finalInstrumentAlloc = pd.DataFrame(columns=[0, 1])
+        for instrument in df['Asset']:
+            print('instrument name', instrument)
+            data = self.parseFundDetailsPage(instrument)
+            if (len(data) == 0):
+                continue
+            instrumentAlloc = data.get('instruments')
+            sectorAlloc = data.get('sectors')
+            countryAlloc = data.get('countries')
+            fundData = data.get('key-data')
+            
+            weight = df.loc[df['Asset'] == instrument, 'Weight'][0]
+            print('instrument weight', weight)
+            instrumentAlloc[1] = instrumentAlloc[1].multiply(weight)
+            sectorAlloc[1] = sectorAlloc[1].multiply(weight)
+            countryAlloc[1] = countryAlloc[1].multiply(weight)
+            Utils.printDf(instrumentAlloc)
+            finalInstrumentAlloc = pd.merge(instrumentAlloc, finalInstrumentAlloc, how='outer', left_on=0, right_on=0, suffixes=('_left', '_right'))
+
+            Utils.printDf(finalInstrumentAlloc)
+            finalSectorAlloc = pd.merge(sectorAlloc, finalSectorAlloc, how='outer', left_on=0, right_on=0, suffixes=('_left', '_right'))
+            
+            finalCountryAlloc = pd.merge(countryAlloc, finalCountryAlloc, how='outer', left_on=0, right_on=0, suffixes=('_left', '_right'))
+            # Utils.printDf(finalCountryAlloc)
+
+        finalSectorAlloc.loc[:,'Total'] = finalSectorAlloc.sum(axis=1)
+        finalSectorAlloc = finalSectorAlloc.iloc[:,[0, -1]]
+        Utils.printDf(finalSectorAlloc.sort_values('Total', ascending=False))
+
+        finalCountryAlloc.loc[:,'Total'] = finalCountryAlloc.sum(axis=1)
+        finalCountryAlloc = finalCountryAlloc.iloc[:,[0, -1]]
+        Utils.printDf(finalCountryAlloc.sort_values('Total', ascending=False))
+        print(finalCountryAlloc['Total'].sum())
+
+        finalInstrumentAlloc.loc[:,'Total'] = finalInstrumentAlloc.sum(axis=1)
+        finalInstrumentAlloc = finalInstrumentAlloc.iloc[:,[0, -1]]
+        Utils.printDf(finalInstrumentAlloc.sort_values('Total', ascending=False))
+
+
         conditions = [
             df['Asset'] == 'AMF Räntefond Lång',
             df['Asset'] == 'Avanza Emerging Markets',
@@ -164,19 +284,19 @@ class Portfolio:
         res = np.select(conditions, outputs, 'Other')
         df = df.assign(Market=pd.Series(res).values)
 
-        em = df[df.Market == 'Emerging Markets'].Weight.sum().round(3)
-        glob = df[df.Market == 'Global'].Weight.sum().round(3)
-        nord = df[df.Market == 'Nordics'].Weight.sum().round(3)
-        eur = df[df.Market == 'Europe'].Weight.sum().round(3)
-        interests = df[df.Market == 'Interests'].Weight.sum().round(3)
+        # em = df[df.Market == 'Emerging Markets'].Weight.sum().round(3)
+        # glob = df[df.Market == 'Global'].Weight.sum().round(3)
+        # nord = df[df.Market == 'Nordics'].Weight.sum().round(3)
+        # eur = df[df.Market == 'Europe'].Weight.sum().round(3)
+        # interests = df[df.Market == 'Interests'].Weight.sum().round(3)
 
-        # print fund rule check
-        Utils.printDf(df)
-        print('Emerging Market weight', em)
-        print('Global weight', glob)
-        print('Nordics weight', nord)
-        print('Eur weight', eur)
-        print('Interests', interests)
+        # # print fund rule check
+        # Utils.printDf(df)
+        # print('Emerging Market weight', em)
+        # print('Global weight', glob)
+        # print('Nordics weight', nord)
+        # print('Eur weight', eur)
+        # print('Interests', interests)
 
     def saveStockInfoToExcel(self):
         for asset in self.stocks['Asset']:
