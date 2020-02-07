@@ -46,7 +46,6 @@ intrinio_sdk.ApiClient().configuration.api_key['api_key'] = intrinioKey
 sp = SectorPerformances(key=alphaVantageKey, output_format='pandas')
 ts = TimeSeries(key=alphaVantageKey,output_format='pandas', indexing_type='integer')
 
-
 class Portfolio:
 
     bank = 'Avanza'         #   class variables shared by all instances
@@ -94,7 +93,6 @@ class Portfolio:
 
         return (stocks,concat_funds, cert)
 
-
     def checkRules(self):
         stock_value = self.stocks.MarketValue.sum()
         funds_value = self.funds.MarketValue.sum() 
@@ -130,25 +128,57 @@ class Portfolio:
 
         soup = BeautifulSoup(avanzaGlobal, 'lxml')
         fee = soup.find("h3", attrs= {'data-e2e': 'fon-guide-total-fee'}).text.strip()
-        print('fund fee', fee)
 
         keyData = soup.find_all('div', {'class': 'border-space-item'})
 
-        keyDataDict = {}
+        keyDataDict = {'Fee': fee}
+        translationDict = {
+            'Typ': 'Type',
+            'Alternativa': 'Alternative',
+            'Aktiefond': 'Equity',
+            'Räntefond': 'Fixed Income',
+            'Kategori': 'Category',
+            'Hedgefond, Multi-strategi': 'Hedgefund, Multi-strategy',
+            'Tillväxtmarknader': 'Emerging Markets',
+            'Global, Mix bolag': 'Global Mix',
+            'Global, Småbolag': 'Global Small Cap',
+            'Ränte - SEK obligationer, Företag': 'Corporate Bonds SEK',
+            'Sverige': 'Sweden',
+            'Europa, Mix bolag': 'Europe Mix',
+            'Ränte - övriga obligationer': 'Fixed Income MISC',
+            'Asien ex Japan': 'Asia ex Japan',
+            'Jämförelseindex': 'Index',
+            'Indexfond': 'Index Fund',
+            'Fondens startdatum': 'Start date',
+            'Fondbolag': 'Company',
+            'Hemsida': 'Website',
+            'Legalt säte': 'Registered In',
+            'Antal ägare hos Avanza': 'Owners at Avanza',
+            'Förvaltat kapital': 'AUM',
+            'Standardavvikelse': 'Standard Deviation',
+            'Sharpekvot': 'Sharpe Ratio',
+            'Ja': 'Yes',
+            'Nej': 'No'
+        }
         for div in keyData:
             key = div.label.text.strip()
+            translatedKey = translationDict.get(key)
+            if(translatedKey == None):
+                translatedKey = key
             span = div.find('span', {'class': 'u-body-text'})
             if (span != None):
                 value = div.find('span', {'class': 'u-body-text'}).text.strip()
-                keyDataDict[key] = value
+                translatedValue = translationDict.get(value)
+                if (translatedValue == None):
+                    translatedValue = value
+                keyDataDict[translatedKey] = translatedValue
                 continue
             value = div.find('a', {'class': 'u-body-text'}).text.strip()
-            keyDataDict[key] = value
+            keyDataDict[translatedKey] = value
         keyDataDF = pd.DataFrame(list(keyDataDict.items()))
 
-
         allocationDataLists = soup.find_all('ul', {'class': 'allocation-list'})
-        # we know there is no country/sector data ie special fund, dont bother returning anything
+        # we know there is no country/sector data ie special fund, dont bother returning anything else then key data
         if (len(allocationDataLists) == 1): 
             # instrumentDict = {}
             # instrumentAllocations = allocationDataLists[0]
@@ -160,8 +190,8 @@ class Portfolio:
             # instrumentsDF = pd.DataFrame(list(instrumentDict.items()))
 
             # return {'key-data': keyDataDF, 'instruments': instrumentsDF}
-            print('special fund, return nothing')
-            return {}
+            print('special fund, return only key data')
+            return {'key-data': keyDataDF}
         else:
             ## countries and regions
             countryDict = {}
@@ -175,7 +205,6 @@ class Portfolio:
                 countryDict[countries[i].text.strip()] = percentegeFloat
             countryDF  = pd.DataFrame(list(countryDict.items()))
 
-            
             ## sectors 
             sectorDict = {}
             sectorAllocations = allocationDataLists[1]
@@ -193,17 +222,15 @@ class Portfolio:
             stocks = stockAllocations.find_all('span', {'class': 'u-ellipsis'})
             percentages = stockAllocations.find_all('span', {'class': 'percent'})
             stocks = list(OrderedDict.fromkeys(stocks)) #remove duplicates
-            c= [c.text.strip() for c in stocks]
-            print(c)
-            p = [p.text.strip() for p in percentages]
-            print(p)
+            # c= [c.text.strip() for c in stocks]
+            # print(c)
+            # p = [p.text.strip() for p in percentages]
+            # print(p)
             for i in range(len(stocks)):
                 percentageString = percentages[i].text.strip().replace('%', '').replace(',', '.').replace('−', '-')
                 percentegeFloat = round(float(percentageString)/100, 4)
                 stockDict[stocks[i].text.strip()] = percentegeFloat
             stocksDF = pd.DataFrame(list(stockDict.items()))
-
-
 
             return {'key-data': keyDataDF,'countries': countryDF,'sectors': sectorDF,'instruments': stocksDF}
 
@@ -216,73 +243,73 @@ class Portfolio:
         for instrument in df['Asset']:
             print('instrument name', instrument)
             data = self.parseFundDetailsPage(instrument)
-            if (len(data) == 0):
+            fundData = data.get('key-data')
+            # add fund data to the fund dataframe
+            for row in fundData.itertuples():
+                key = row._1
+                value = row._2
+                df.loc[df['Asset'] == instrument, key] = value
+            if (len(data) == 1):
                 continue
+            
             instrumentAlloc = data.get('instruments')
             sectorAlloc = data.get('sectors')
             countryAlloc = data.get('countries')
-            fundData = data.get('key-data')
             
+            # calculate total exposure
             weight = df.loc[df['Asset'] == instrument, 'Weight'][0]
-            print('instrument weight', weight)
             instrumentAlloc[1] = instrumentAlloc[1].multiply(weight)
             sectorAlloc[1] = sectorAlloc[1].multiply(weight)
             countryAlloc[1] = countryAlloc[1].multiply(weight)
-            Utils.printDf(instrumentAlloc)
+            
             finalInstrumentAlloc = pd.merge(instrumentAlloc, finalInstrumentAlloc, how='outer', left_on=0, right_on=0, suffixes=('_left', '_right'))
 
-            Utils.printDf(finalInstrumentAlloc)
             finalSectorAlloc = pd.merge(sectorAlloc, finalSectorAlloc, how='outer', left_on=0, right_on=0, suffixes=('_left', '_right'))
             
             finalCountryAlloc = pd.merge(countryAlloc, finalCountryAlloc, how='outer', left_on=0, right_on=0, suffixes=('_left', '_right'))
-            # Utils.printDf(finalCountryAlloc)
 
-        finalSectorAlloc.loc[:,'Total'] = finalSectorAlloc.sum(axis=1)
-        finalSectorAlloc = finalSectorAlloc.iloc[:,[0, -1]]
-        Utils.printDf(finalSectorAlloc.sort_values('Total', ascending=False))
+        # total exposure
+        finalSectorAlloc = self.modifyAllocationDF(finalSectorAlloc)
 
-        finalCountryAlloc.loc[:,'Total'] = finalCountryAlloc.sum(axis=1)
-        finalCountryAlloc = finalCountryAlloc.iloc[:,[0, -1]]
-        Utils.printDf(finalCountryAlloc.sort_values('Total', ascending=False))
-        print(finalCountryAlloc['Total'].sum())
+        finalCountryAlloc = self.modifyAllocationDF(finalCountryAlloc)
+        
+        finalInstrumentAlloc = self.modifyAllocationDF(finalInstrumentAlloc)
 
-        finalInstrumentAlloc.loc[:,'Total'] = finalInstrumentAlloc.sum(axis=1)
-        finalInstrumentAlloc = finalInstrumentAlloc.iloc[:,[0, -1]]
-        Utils.printDf(finalInstrumentAlloc.sort_values('Total', ascending=False))
+        Utils.printDf(df)
+        
 
+        # conditions = [
+        #     df['Asset'] == 'AMF Räntefond Lång',
+        #     df['Asset'] == 'Avanza Emerging Markets',
+        #     df['Asset'] == 'Avanza Global',
+        #     df['Asset'] == 'Länsförsäkringar Tillväxtmrkd Idxnära A',
+        #     df['Asset'] == 'Spiltan Aktiefond Investmentbolag',
+        #     df['Asset'] == 'Spiltan Globalfond Investmentbolag',
+        #     df['Asset'] == 'SPP Aktiefond Europa',
+        #     df['Asset'] == 'Swedbank Robur Access Asien',
+        #     df['Asset'] == 'DBX MSCI EUROPE ETF (DR)',
+        #     df['Asset'] == 'Handelsbanken Gl Småbolag Ind Cri A1 SEK',
+        #     df['Asset'] == 'SPP Global Företagsobligations Plus A',
+        #     df['Asset'] == 'Atlant Stability'
+        # ]
 
-        conditions = [
-            df['Asset'] == 'AMF Räntefond Lång',
-            df['Asset'] == 'Avanza Emerging Markets',
-            df['Asset'] == 'Avanza Global',
-            df['Asset'] == 'Länsförsäkringar Tillväxtmrkd Idxnära A',
-            df['Asset'] == 'Spiltan Aktiefond Investmentbolag',
-            df['Asset'] == 'Spiltan Globalfond Investmentbolag',
-            df['Asset'] == 'SPP Aktiefond Europa',
-            df['Asset'] == 'Swedbank Robur Access Asien',
-            df['Asset'] == 'DBX MSCI EUROPE ETF (DR)',
-            df['Asset'] == 'Handelsbanken Gl Småbolag Ind Cri A1 SEK',
-            df['Asset'] == 'SPP Global Företagsobligations Plus A',
-            df['Asset'] == 'Atlant Stability'
-        ]
+        # outputs = [
+        # 'Interests', 
+        # 'Emerging Markets',
+        # 'Global', 
+        # 'Emerging Markets', 
+        # 'Nordics', 
+        # 'Global', 
+        # 'Europe', 
+        # 'Emerging Markets',
+        # 'Europe',
+        # 'Global',
+        # 'Interests',
+        # 'Interests',
+        # ]
 
-        outputs = [
-        'Interests', 
-        'Emerging Markets',
-        'Global', 
-        'Emerging Markets', 
-        'Nordics', 
-        'Global', 
-        'Europe', 
-        'Emerging Markets',
-        'Europe',
-        'Global',
-        'Interests',
-        'Interests',
-        ]
-
-        res = np.select(conditions, outputs, 'Other')
-        df = df.assign(Market=pd.Series(res).values)
+        # res = np.select(conditions, outputs, 'Other')
+        # df = df.assign(Market=pd.Series(res).values)
 
         # em = df[df.Market == 'Emerging Markets'].Weight.sum().round(3)
         # glob = df[df.Market == 'Global'].Weight.sum().round(3)
@@ -291,12 +318,21 @@ class Portfolio:
         # interests = df[df.Market == 'Interests'].Weight.sum().round(3)
 
         # # print fund rule check
-        # Utils.printDf(df)
         # print('Emerging Market weight', em)
         # print('Global weight', glob)
         # print('Nordics weight', nord)
         # print('Eur weight', eur)
         # print('Interests', interests)
+
+    def modifyAllocationDF(self, df):
+        df.loc[:,'Total'] = df.sum(axis=1)  # take the sum accros each row and store in new col Total
+        df = df.iloc[:,[0, -1]] # extract the column containing instrument name and their Total sum
+        df = df.round(4) # round everything
+        tot = df['Total'].sum() # sum accross column 
+        df = df.append([{0: 'Other', 'Total': 1-tot}], ignore_index=True)   # add new row called other
+        assert (round(df['Total'].sum(), 4) == 1)  # make sure the new sum is 1
+        Utils.printDf(df.sort_values('Total', ascending=False))
+        return df
 
     def saveStockInfoToExcel(self):
         for asset in self.stocks['Asset']:
