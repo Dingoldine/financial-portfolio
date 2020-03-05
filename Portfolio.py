@@ -19,6 +19,7 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
+from selenium.webdriver.common.action_chains import ActionChains
 from selenium.common.exceptions import NoSuchElementException, TimeoutException
 from bs4 import BeautifulSoup
 import time
@@ -124,13 +125,13 @@ class Portfolio:
             print('too much money in funds')
         
     def parseFundDetailsPage(self, instrument):
-        avanzaGlobal = Utils.readTxtFile(instrument)
+        html = Utils.readTxtFile(instrument)
 
-        soup = BeautifulSoup(avanzaGlobal, 'lxml')
+        soup = BeautifulSoup(html, 'lxml')
         fee = soup.find("h3", attrs= {'data-e2e': 'fon-guide-total-fee'}).text.strip()
 
         keyData = soup.find_all('div', {'class': 'border-space-item'})
-
+        
         keyDataDict = {'Fee': fee}
         translationDict = {
             'Typ': 'Type',
@@ -158,8 +159,33 @@ class Portfolio:
             'Standardavvikelse': 'Standard Deviation',
             'Sharpekvot': 'Sharpe Ratio',
             'Ja': 'Yes',
-            'Nej': 'No'
+            'Nej': 'No',
+            'Kina': 'China',
+            'Sydkorea': 'Korea',
+            'Storbritannien': 'United Kingdom',
+            'Kanada': 'Canada',
+            'Frankrike': 'France',
+            'Schweiz': 'Switzerland',
+            'Brasilien': 'Brazil',
+            'Sydafrika': 'South Africa',
+            'Nederländerna': 'Netherlands',
+            'Ryssland': 'Russia',
+            'Italien': 'Italy',
+            'Spanien': 'Spain',
+            'Belgien': 'Belgium',
+            'Saudiarabien': 'Saudi Arabia',
+            'Mexiko': 'Mexico',
+            'Indonesien': 'Indonesia',
+            'Filippinerna': 'Philippines',
+            'Hongkong': 'Hong Kong',
+            'Norge': 'Norway',
+            'Danmark': 'Denmark',
+            'Indien': 'India',
+            'Australien': 'Australia',
+            'Tyskland': 'Germany',
+            'USA': 'United States'
         }
+
         for div in keyData:
             key = div.label.text.strip()
             translatedKey = translationDict.get(key)
@@ -177,71 +203,85 @@ class Portfolio:
             keyDataDict[translatedKey] = value
         keyDataDF = pd.DataFrame(list(keyDataDict.items()))
 
-        allocationDataLists = soup.find_all('ul', {'class': 'allocation-list'})
-        # we know there is no country/sector data ie special fund, dont bother returning anything else then key data
-        if (len(allocationDataLists) == 1): 
-            # instrumentDict = {}
-            # instrumentAllocations = allocationDataLists[0]
-            # instruments = instrumentAllocations.find_all('span', {'class': 'u-ellipsis'})
-            # percentages = instrumentAllocations.find_all('span', {'class': 'percent'})
-            # instruments = list(set(instruments)) #remove duplicates
-            # for i in range(len(instruments)):
-            #     instrumentDict[instruments[i].text.strip()] = percentages[i].text.strip()
-            # instrumentsDF = pd.DataFrame(list(instrumentDict.items()))
+        exposureDiv = soup.find('div', {'class': 'allocation-lists-wrapper'})
+        allocationDivs = exposureDiv.find_all('div')
+    
+        sectorDF = None
+        countryDF = None
+        stocksDF = None
+        for div in allocationDivs:
+            heading = div.find('h5')
+            if(heading == None):
+                continue
+            else:
+                headingText = heading.text.strip()
+            
+            if headingText == 'Länder':
+                ## countries and regions
+                # print(allocationDataLists[0])
+                countryDict = {}
+                countryAllocations = div.find('ul', {'class': 'allocation-list'})
+                if(countryAllocations == None):
+                    continue 
+                countries = countryAllocations.find_all('span', {'class': 'u-ellipsis'})
+                percentages = countryAllocations.find_all('span', {'class': 'percent'})
+                #countries = list(set(countries))
+                for i in range(len(countries)):
+                    percentageString = percentages[i].text.strip().replace('%', '').replace(',', '.')
+                    percentegeFloat = round(float(percentageString)/100, 4)
+                    country = countries[i].text.strip()
+                    countryInEnglish = translationDict.get(country)
+                    if (countryInEnglish == None):
+                        countryInEnglish = country
+                    countryDict[countryInEnglish] = percentegeFloat
+                countryDF  = pd.DataFrame(list(countryDict.items()))
+            elif headingText == 'Branscher':
+                ## sectors 
+                sectorDict = {}
+                sectorAllocations = div.find('ul', {'class': 'allocation-list'})
+                if(sectorAllocations == None):
+                    continue
+                sectors = sectorAllocations.find_all('span', {'class': 'u-ellipsis'})
+                percentages = sectorAllocations.find_all('span', {'class': 'percent'})
+                for i in range(len(sectors)):
+                    percentageString = percentages[i].text.strip().replace('%', '').replace(',', '.')
+                    percentegeFloat = round(float(percentageString)/100, 4)
+                    sectorDict[sectors[i].text.strip()] = percentegeFloat
+                sectorDF = pd.DataFrame(list(sectorDict.items()))
+            elif headingText == 'Största innehav':
+                ## individual stocks
+                stockDict = {}
+                stockAllocations = div.find('ul', {'class': 'allocation-list'})
+                if(stockAllocations == None):
+                    continue
+                stocks = stockAllocations.find_all('span', {'class': 'u-ellipsis'})
+                percentages = stockAllocations.find_all('span', {'class': 'percent'})
+                stocks = list(OrderedDict.fromkeys(stocks)) #remove duplicates
+                # c= [c.text.strip() for c in stocks]
+                # print(c)
+                # p = [p.text.strip() for p in percentages]
+                # print(p)
+                for i in range(len(stocks)):
+                    percentageString = percentages[i].text.strip().replace('%', '').replace(',', '.').replace('−', '-')
+                    percentegeFloat = round(float(percentageString)/100, 4)
+                    stockDict[stocks[i].text.strip()] = percentegeFloat
+                stocksDF = pd.DataFrame(list(stockDict.items()))
 
-            # return {'key-data': keyDataDF, 'instruments': instrumentsDF}
-            print('special fund, return only key data')
-            return {'key-data': keyDataDF}
-        else:
-            ## countries and regions
-            countryDict = {}
-            countryAllocations = allocationDataLists[0]
-            countries = countryAllocations.find_all('span', {'class': 'u-ellipsis'})
-            percentages = countryAllocations.find_all('span', {'class': 'percent'})
-            #countries = list(set(countries))
-            for i in range(len(countries)):
-                percentageString = percentages[i].text.strip().replace('%', '').replace(',', '.')
-                percentegeFloat = round(float(percentageString)/100, 4)
-                countryDict[countries[i].text.strip()] = percentegeFloat
-            countryDF  = pd.DataFrame(list(countryDict.items()))
-
-            ## sectors 
-            sectorDict = {}
-            sectorAllocations = allocationDataLists[1]
-            sectors = sectorAllocations.find_all('span', {'class': 'u-ellipsis'})
-            percentages = sectorAllocations.find_all('span', {'class': 'percent'})
-            for i in range(len(sectors)):
-                percentageString = percentages[i].text.strip().replace('%', '').replace(',', '.')
-                percentegeFloat = round(float(percentageString)/100, 4)
-                sectorDict[sectors[i].text.strip()] = percentegeFloat
-            sectorDF = pd.DataFrame(list(sectorDict.items()))
-
-            ## individual stocks
-            stockDict = {}
-            stockAllocations = allocationDataLists[2]
-            stocks = stockAllocations.find_all('span', {'class': 'u-ellipsis'})
-            percentages = stockAllocations.find_all('span', {'class': 'percent'})
-            stocks = list(OrderedDict.fromkeys(stocks)) #remove duplicates
-            # c= [c.text.strip() for c in stocks]
-            # print(c)
-            # p = [p.text.strip() for p in percentages]
-            # print(p)
-            for i in range(len(stocks)):
-                percentageString = percentages[i].text.strip().replace('%', '').replace(',', '.').replace('−', '-')
-                percentegeFloat = round(float(percentageString)/100, 4)
-                stockDict[stocks[i].text.strip()] = percentegeFloat
-            stocksDF = pd.DataFrame(list(stockDict.items()))
-
-            return {'key-data': keyDataDF,'countries': countryDF,'sectors': sectorDF,'instruments': stocksDF}
+            else:
+                #do nothing
+                pass
+                
+        return {'key-data': keyDataDF, 'instruments': stocksDF, 'sectors': sectorDF, 'countries': countryDF}
 
     def fundsBreakdown(self):
+        print("#################### FUNDS #####################")
         df = self.funds
         Utils.printDf(df)
         finalSectorAlloc = pd.DataFrame(columns=[0, 1])
         finalCountryAlloc = pd.DataFrame(columns=[0, 1])
         finalInstrumentAlloc = pd.DataFrame(columns=[0, 1])
         for instrument in df['Asset']:
-            print('instrument name', instrument)
+            print('instrument: ', instrument)
             data = self.parseFundDetailsPage(instrument)
             fundData = data.get('key-data')
             # add fund data to the fund dataframe
@@ -249,35 +289,75 @@ class Portfolio:
                 key = row._1
                 value = row._2
                 df.loc[df['Asset'] == instrument, key] = value
-            if (len(data) == 1):
-                continue
             
             instrumentAlloc = data.get('instruments')
             sectorAlloc = data.get('sectors')
             countryAlloc = data.get('countries')
-            
-            # calculate total exposure
             weight = df.loc[df['Asset'] == instrument, 'Weight'][0]
-            instrumentAlloc[1] = instrumentAlloc[1].multiply(weight)
-            sectorAlloc[1] = sectorAlloc[1].multiply(weight)
-            countryAlloc[1] = countryAlloc[1].multiply(weight)
-            
-            finalInstrumentAlloc = pd.merge(instrumentAlloc, finalInstrumentAlloc, how='outer', left_on=0, right_on=0, suffixes=('_left', '_right'))
 
-            finalSectorAlloc = pd.merge(sectorAlloc, finalSectorAlloc, how='outer', left_on=0, right_on=0, suffixes=('_left', '_right'))
+            if instrumentAlloc is not None:
+                instrumentAlloc[1] = instrumentAlloc[1].multiply(weight)
+                finalInstrumentAlloc = pd.merge(instrumentAlloc, finalInstrumentAlloc, how='outer', left_on=0, right_on=0, suffixes=('_left', '_right'))
+            # calculate total exposure
+            if sectorAlloc is not None:
+                sectorAlloc[1] = sectorAlloc[1].multiply(weight)
+                finalSectorAlloc = pd.merge(sectorAlloc, finalSectorAlloc, how='outer', left_on=0, right_on=0, suffixes=('_left', '_right'))
             
-            finalCountryAlloc = pd.merge(countryAlloc, finalCountryAlloc, how='outer', left_on=0, right_on=0, suffixes=('_left', '_right'))
+            if countryAlloc is not None:
+                countryAlloc[1] = countryAlloc[1].multiply(weight)
+                finalCountryAlloc = pd.merge(countryAlloc, finalCountryAlloc, how='outer', left_on=0, right_on=0, suffixes=('_left', '_right'))
 
         # total exposure
         finalSectorAlloc = self.modifyAllocationDF(finalSectorAlloc)
-
+        Utils.printDf(finalSectorAlloc.sort_values('Weight', ascending=False))
+        
         finalCountryAlloc = self.modifyAllocationDF(finalCountryAlloc)
         
+        ######################################
+
+        wb = Utils.readExcel('ctryprem2020')
+        #sheet_names = wb.sheet_names()
+        #print('Sheet Names', sheet_names)
+        erpByCountry = wb.sheet_by_name('ERPs by country')
+        #headings index is 6
+        headings = erpByCountry.row_values(6) 
+
+        def getCountryRiskPremium(x):
+            country = x[0]
+            #loop over content
+            for row in range(7, erpByCountry.nrows):
+                excelCountry = erpByCountry.cell(row, 0).value
+                if(country==excelCountry):
+                    region = erpByCountry.cell(row, 1).value
+                    rating = erpByCountry.cell(row, 2).value
+                    defaultSpread = erpByCountry.cell(row, 3).value
+                    erp = erpByCountry.cell(row, 4).value
+                    countryRiskPremium = erpByCountry.cell(row, 5).value
+                    x['Region'] = region
+                    x[headings[2]] = rating
+                    x[headings[3]] = defaultSpread
+                    x[headings[4]+'(Damodaran)'] = erp
+                    x[headings[5]] = countryRiskPremium
+                    break
+                elif (country == 'Other'):
+                    # take the global weighted average from damodarans sheet
+                    regionalWeightedAverageSheet = wb.sheet_by_name('Regional Weighted Averages')
+                    globalERP = regionalWeightedAverageSheet.cell(178,1).value
+                    globalCountryRiskPremium = regionalWeightedAverageSheet.cell(178, 2).value
+                    globalDefaultSpread = regionalWeightedAverageSheet.cell(178, 3).value
+                    x['Region'] = 'Global'
+                    x[headings[3]] = globalDefaultSpread
+                    x[headings[4]+'(Damodaran)'] = globalERP
+                    x[headings[5]] = globalCountryRiskPremium
+                    break
+            return x
+        ######################################
+
+        finalCountryAlloc = finalCountryAlloc.apply(getCountryRiskPremium, axis=1)
+        Utils.printDf(finalCountryAlloc.sort_values('Weight', ascending=False))
+
         finalInstrumentAlloc = self.modifyAllocationDF(finalInstrumentAlloc)
-
-        Utils.printDf(df)
-        
-
+        Utils.printDf(finalInstrumentAlloc.sort_values('Weight', ascending=False))
         # conditions = [
         #     df['Asset'] == 'AMF Räntefond Lång',
         #     df['Asset'] == 'Avanza Emerging Markets',
@@ -290,7 +370,13 @@ class Portfolio:
         #     df['Asset'] == 'DBX MSCI EUROPE ETF (DR)',
         #     df['Asset'] == 'Handelsbanken Gl Småbolag Ind Cri A1 SEK',
         #     df['Asset'] == 'SPP Global Företagsobligations Plus A',
-        #     df['Asset'] == 'Atlant Stability'
+        #     df['Asset'] == 'Atlant Stability',
+        #     df['Asset'] == 'Pacific Precious A',
+        #     df['Asset'] == 'IKC Avkastningsfond',
+        #     df['Asset'] == 'AMF Räntefond Mix',
+        #     df['Asset'] == 'Avanza Europa',
+        #     df['Asset'] == 'Avanza Zero',
+        #     df['Asset'] == 'Länsförsäkringar Global Indexnära'
         # ]
 
         # outputs = [
@@ -306,32 +392,67 @@ class Portfolio:
         # 'Global',
         # 'Interests',
         # 'Interests',
+        # 'Commodities',
+        # 'Interests',
+        # 'Interests',
+        # 'Europe',
+        # 'Nordics',
+        # 'Global'
         # ]
 
         # res = np.select(conditions, outputs, 'Other')
-        # df = df.assign(Market=pd.Series(res).values)
+        # df = df.assign(Region=pd.Series(res).values)
 
-        # em = df[df.Market == 'Emerging Markets'].Weight.sum().round(3)
-        # glob = df[df.Market == 'Global'].Weight.sum().round(3)
-        # nord = df[df.Market == 'Nordics'].Weight.sum().round(3)
-        # eur = df[df.Market == 'Europe'].Weight.sum().round(3)
-        # interests = df[df.Market == 'Interests'].Weight.sum().round(3)
+        def conditions(s):
+            C = s['Category']
+            if (('Global' in C) or ('MISC' in C)):
+                return 'Global'
+            elif (('Emerging' in C) or ('Asia ex Japan' in C)):
+                return 'Emerging Markets'
+            elif ('Europe' in C):
+                return 'Europe'
+            elif (('Sweden' in C)):
+                return 'Sweden'
+            elif('Hedgefund' in C):
+                return '-'
+            else: 
+                return '-'
 
-        # # print fund rule check
-        # print('Emerging Market weight', em)
-        # print('Global weight', glob)
-        # print('Nordics weight', nord)
-        # print('Eur weight', eur)
-        # print('Interests', interests)
+        df['Region'] = df.apply(conditions, axis=1)
+        
+        # Calculate Equity Weights
+        em = df[(df.Region == 'Emerging Markets') & (df.Type == 'Equity')].Weight.sum().round(3)
+        glob = df[(df.Region == 'Global') & (df.Type == 'Equity')].Weight.sum().round(3)
+        nord = df[((df.Region == 'Nordics') | (df.Region == 'Sweden')) & (df.Type == 'Equity')].Weight.sum().round(3)
+        eur = df[(df.Region == 'Europe') & (df.Type == 'Equity')].Weight.sum().round(3)
+
+        #Utils.printDf(df)
+        # Calculate Fixed Income Weights
+        interests = df[df.Type == 'Fixed Income'].Weight.sum().round(3)
+
+        # Calulate Alternative Fund Weights 
+        alternative = df[df.Type == 'Alternative'].Weight.sum().round(3)
+
+        # Assert portfolio weight sums to 1
+        assert(em + glob + nord + eur + interests + alternative == 1)
+        # print fund rule check
+        print('EMERGING MARKETS EQUITY:', em)
+        print('GLOBAL EQUITY:', glob)
+        print('SWEDEN(NORDICS) EQUITY:', nord)
+        print('EUROZONE EQUITY:', eur)
+        print('FIXED INCOME', interests)
+        print('ALTERNATIVE INVESTMENTS:', interests)
+
+        print("#################### END OF FUNDS #####################")
+        
 
     def modifyAllocationDF(self, df):
-        df.loc[:,'Total'] = df.sum(axis=1)  # take the sum accros each row and store in new col Total
+        df.loc[:,'Weight'] = df.sum(axis=1)  # take the sum accros each row and store in new col Weight
         df = df.iloc[:,[0, -1]] # extract the column containing instrument name and their Total sum
         df = df.round(4) # round everything
-        tot = df['Total'].sum() # sum accross column 
-        df = df.append([{0: 'Other', 'Total': 1-tot}], ignore_index=True)   # add new row called other
-        assert (round(df['Total'].sum(), 4) == 1)  # make sure the new sum is 1
-        Utils.printDf(df.sort_values('Total', ascending=False))
+        tot = df['Weight'].sum() # sum accross column 
+        df = df.append([{0: 'Other', 'Weight': 1-tot}], ignore_index=True)   # add new row called other
+        assert (round(df['Weight'].sum(), 4) == 1)  # make sure the new sum is 1
         return df
 
     def saveStockInfoToExcel(self):
@@ -472,6 +593,8 @@ class Portfolio:
         'Cash Flow Summary', 'Ratios', 'Dividends']
         # df_map = pd.read_excel(f'{saveLocation}/portfolio.xlsx', sheet_name=None)
 
+    def stocksBreakdown(self):
+        pass
 
     def scrapeNasdaq(self):
         df = self.stocks
@@ -494,28 +617,38 @@ class Portfolio:
         opt = webdriver.FirefoxOptions()
         browser = webdriver.Firefox(options=opt, firefox_profile=fp, service_log_path=log_path)
         
-        # poll for elements for 10 seconds max, before shutdown
-        browser.implicitly_wait(5)
-        url = "http://www.nasdaqomxnordic.com/shares"
-        browser.get(url)
+        # poll for elements for 5 seconds max, before shutdown
+        browser.implicitly_wait(0)
+        wait = WebDriverWait(browser, 20)
 
-        #wait for javascipt to load then scrape, this part is tricky to optimize, HOW TO KNOW THAT ENTIRE PAGE HAS LOADED?
-        #time.sleep(4)
-        
+        def waitforload():
+             wait.until(lambda d: d.execute_script(
+                'return (document.readyState == "complete" || document.readyState == "interactive")')
+            )
+
+        url = "http://www.nasdaqomxnordic.com/shares"
+
+        #wait for javascipt to load then scrape
+        browser.get(url)
+        waitforload()
         midCapXPATH = "/html/body/section/div/div/div/section/div/article/div/section/form/div[4]/ul/li[2]"
         smallCapXPATH = "/html/body/section/div/div/div/section/div/article/div/section/form/div[4]/ul/li[3]"
         # searchFieldXPATH = "/html/body/section/div/div/div/section/div/article/div/div[2]/table[1]/thead/tr[2]/td[2]/input"
-        midcapCheckbox = WebDriverWait(browser, 10).until(
+        midcapCheckbox = wait.until(
             EC.element_to_be_clickable((By.XPATH, midCapXPATH))
         )
         midcapCheckbox.click()
-        smallcapCheckbox = WebDriverWait(browser, 10).until(
+        smallcapCheckbox = wait.until(
             EC.element_to_be_clickable((By.XPATH, smallCapXPATH))
         )
         smallcapCheckbox.click()
 
         # wait for table to update
-        time.sleep(4)
+        waitforload()
+        loadingImgXPATH = "/html/body/section/div/div/div/section/div/article/div/div[2]/img"
+        wait.until(
+            EC.invisibility_of_element_located((By.XPATH, loadingImgXPATH))
+        )
         
         myDict = {}
         notFound = []
@@ -527,23 +660,31 @@ class Portfolio:
                 #add to dict
                 myDict[str(asset.get_attribute("innerHTML")).strip()] = asset.get_attribute("href")
             except NoSuchElementException:
-                print("couldnt find: ", assetName, "in Main Market")
+                print(f'Could not find  {assetName} in Main Market')
                 notFound.append(assetName)
         
         if len(notFound) > 0:
             print("Searching For Assets In First North...")
             firstNorthXPATH = '/html/body/section/div/div/div/section/div/article/div/section/form/div[1]/div/label[2]'
-            firstNorthCheckbox = WebDriverWait(browser, 10).until(
+            firstNorthCheckbox = wait.until(
                 EC.element_to_be_clickable((By.XPATH, firstNorthXPATH))
             )
-            firstNorthCheckbox.click()
+            coordinates = firstNorthCheckbox.location_once_scrolled_into_view
+        
+            browser.execute_script(f'window.scrollTo({coordinates["x"]}, {coordinates["y"]});') #scroll to element
+            ActionChains(browser).move_to_element(firstNorthCheckbox).perform() #hover over 
+            firstNorthCheckbox.click() #click
+                                
             firstNorthGMXPATH = "/html/body/section/div/div/div/section/div/article/div/section/form/div[5]/ul/li[2]"
-            firstNorthGMCheckbox = WebDriverWait(browser, 10).until(
+            firstNorthGMCheckbox = wait.until(
                 EC.element_to_be_clickable((By.XPATH, firstNorthGMXPATH))
             )
             firstNorthGMCheckbox.click()
+            
             # wait for table to update
-            time.sleep(4)
+            wait.until(
+                EC.invisibility_of_element_located((By.XPATH, loadingImgXPATH))
+            )
 
             for assetName in notFound:
                 try:
@@ -558,21 +699,27 @@ class Portfolio:
             try:
                 browser.get(href)
                 keyRatiosXPATH = "/html/body/section/div/div/div/section/section/section/nav/ul/li[4]/a"
-                keyRatiosLink = WebDriverWait(browser, 10).until(
+                keyRatiosLink = wait.until(
                     EC.element_to_be_clickable((By.XPATH, keyRatiosXPATH))
                 )
                 keyRatiosLink.click()
 
                 # wait for page to load
-                time.sleep(10)
-                morningstarFrameXPATH = '//*[@id="MorningstarIFrame"]'
-                morningstarFrame = WebDriverWait(browser, 10).until(
-                    EC.frame_to_be_available_and_switch_to_it(By.XPATH, morningstarFrameXPATH)
-                )
+                waitforload()
+
                 # Switch to iframe containing morningstar data
-                #frame = browser.find_element(By.XPATH, )
-                #browser.switch_to.frame(frame)
-                #html = browser.execute_script("return document.documentElement.outerHTML")
+                morningstarFrameXPATH = '//*[@id="MorningstarIFrame"]'  
+                wait.until(
+                    EC.frame_to_be_available_and_switch_to_it((By.XPATH, morningstarFrameXPATH))
+                )
+                
+                #tableCaptionXPATH = "/html/body/div[2]/div[2]/form/div[4]/div[2]/div/div/div[3]/div[2]/table/caption"
+                #expectedText = "Margins (\\% \\of Sales)"
+                wait.until(
+                    EC.visibility_of_any_elements_located((By.XPATH, '//*[@id="SnapshotBodyContent"]'))
+                )
+                
+                # Get Page Source
                 html = browser.page_source 
                 # tables = browser.find_elements(By.XPATH, "//table")
             
@@ -583,15 +730,20 @@ class Portfolio:
                 browser.switch_to.default_content()
 
                 overwiewXPATH = "/html/body/section/div/div/div/section/section/section/nav/ul/li[2]/a"
-                overwiewLink = WebDriverWait(browser, 10).until(
+                overwiewLink = wait.until(
                     EC.element_to_be_clickable((By.XPATH, overwiewXPATH))
                 )
                 overwiewLink.click()
                 
                 # wait for content to load
-                time.sleep(10)
-                frame = browser.find_element(By.XPATH, '//*[@id="MorningstarIFrame"]')
-                browser.switch_to.frame(frame)
+                wait.until(
+                    EC.frame_to_be_available_and_switch_to_it((By.XPATH, morningstarFrameXPATH))
+                )
+                waitforload()
+                
+                wait.until(
+                    EC.visibility_of_any_elements_located((By.XPATH, '//*[@id="SnapshotBodyContent"]'))
+                )
                 html = browser.page_source 
                 soup = BeautifulSoup(html, 'lxml')
                 saveHtmlToFile(str(soup.prettify()), f'{asset}_overview')
@@ -600,10 +752,10 @@ class Portfolio:
                 browser.switch_to.default_content()
 
                 # Download Fact Sheet
-                downloadFactsheet(browser, asset, downloadDir)
+                #downloadFactsheet(browser, asset, downloadDir)
                  
-            except Exception as e:
-                print("what happened", e)
+            except (TimeoutException, NoSuchElementException) as e:
+                print(e)
              
         # update stocks class variable
         print(df.to_string())
@@ -635,7 +787,7 @@ def find_all_iframes(driver):
 def downloadFactsheet(browser, name, directory):
     
     factsheetLinkXPATH = "/html/body/section/div/div/div/section/section/section/nav/ul/li[6]/a"
-    factsheetLink = WebDriverWait(browser, 10).until(
+    factsheetLink = wait.until(
         EC.element_to_be_clickable((By.XPATH, factsheetLinkXPATH))
     )
     #instantly downloads the factsheet
@@ -653,3 +805,4 @@ def saveHtmlToFile(html, filename):
     print(f'Saving {filename}.txt')
     with open(f'{savePath}/{filename}.txt', 'w') as f:
         f.write(html)
+

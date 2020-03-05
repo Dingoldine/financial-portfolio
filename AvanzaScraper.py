@@ -84,8 +84,10 @@ def parseHTML(data):
                 caption = captionTag.text.strip()
                 #print(table.prettify())
                 headers, rows = parseTable(table)
-                df = buildDataframe(headers, rows, caption) 
-                #Utils.printDf(df)
+                df, err = buildDataframe(headers, rows, caption) 
+                #Utils.printDf(df)f
+                if(err):
+                    continue
                 dataframes.append(df)
 
         return dataframes
@@ -182,8 +184,11 @@ def buildDataframe(headers, rows, caption):
     }
     
     function = switcher.get(caption, "Invalid value")
+    if (function=='Invalid value'):
+        return None, True
+    
     df = function(headers, rows)
-    return df
+    return df, None
 
 def log_error(e):
     """
@@ -352,11 +357,11 @@ if __name__ == '__main__':
     }
 
     # login and get new data
-    # browser = loginToAvanza(login_url, payload)
+    #browser = loginToAvanza(login_url, payload)
 
-    # html = get_portfolio(browser)
+    #html = get_portfolio(browser)
 
-    # Utils.saveTxtFile(html, 'htmlAvanza') 
+    #Utils.saveTxtFile(html, 'htmlAvanza') 
 
     # use old data
     html = Utils.readTxtFile('htmlAvanza')
@@ -371,6 +376,6 @@ if __name__ == '__main__':
     portfolio = initiatePortfolio()
     portfolio.checkRules()
     portfolio.fundsBreakdown() 
-    # # portfolio.scrapeNasdaq()
-    # # portfolio.saveStockInfoToExcel()
-    # portfolio.readStockInfoFromExcel('Kindred Group')
+    portfolio.scrapeNasdaq()
+    portfolio.saveStockInfoToExcel()
+    portfolio.readStockInfoFromExcel('Kindred Group')
