@@ -468,13 +468,7 @@ class Portfolio:
             except Exception as e:
                 print('Something went wrong.. \n Message ', e)
                 continue
-            # need to extract table containing multiple tbody tags
-            # soup = BeautifulSoup(html, 'lxml')
-            # multipleTbodyTableDiv = soup.find('div', {'id': 'KeyRatiosGrowthRates'})
-            # table = multipleTbodyTableDiv.find('table')
-            # for tbody in table('tbody'):
-            #     tbody.unwrap()
-            # print(table.prettify())
+
             _ = dataframeList.pop() # no need for morningstar disclaimer table
 
             for index, df in enumerate(dataframeList):
@@ -490,7 +484,7 @@ class Portfolio:
             profitabilityRatios.name = 'Profitability'
             # print(profitabilityRatios.loc['Net Margin'].values.tolist())
             
-            # THIS TABLE HAS MULTIPLE TBODY TAGs, IT BEOMES A PROBLEM
+            # THIS TABLE HAS MULTIPLE TBODY TAGs,
             ## need to split into sub-dataframes
             growthRateRatios = dataframeList[2]
 
@@ -619,7 +613,7 @@ class Portfolio:
         
         # poll for elements for 5 seconds max, before shutdown
         browser.implicitly_wait(0)
-        wait = WebDriverWait(browser, 20)
+        wait = WebDriverWait(browser, 30)
 
         def waitforload():
              wait.until(lambda d: d.execute_script(
@@ -702,6 +696,9 @@ class Portfolio:
                 keyRatiosLink = wait.until(
                     EC.element_to_be_clickable((By.XPATH, keyRatiosXPATH))
                 )
+                coordinates = keyRatiosLink.location_once_scrolled_into_view
+                browser.execute_script(f'window.scrollTo({coordinates["x"]}, {coordinates["y"]});') #scroll to element
+                ActionChains(browser).move_to_element(keyRatiosLink).perform() #hover over 
                 keyRatiosLink.click()
 
                 # wait for page to load
@@ -713,12 +710,10 @@ class Portfolio:
                     EC.frame_to_be_available_and_switch_to_it((By.XPATH, morningstarFrameXPATH))
                 )
                 
-                #tableCaptionXPATH = "/html/body/div[2]/div[2]/form/div[4]/div[2]/div/div/div[3]/div[2]/table/caption"
-                #expectedText = "Margins (\\% \\of Sales)"
-                wait.until(
-                    EC.visibility_of_any_elements_located((By.XPATH, '//*[@id="SnapshotBodyContent"]'))
+                keyRatioTables = wait.until(
+                    EC.visibility_of_all_elements_located((By.XPATH, "//table"))
                 )
-                
+
                 # Get Page Source
                 html = browser.page_source 
                 # tables = browser.find_elements(By.XPATH, "//table")
@@ -735,15 +730,28 @@ class Portfolio:
                 )
                 overwiewLink.click()
                 
-                # wait for content to load
+                # wait for Iframe and Iframe content to load
                 wait.until(
                     EC.frame_to_be_available_and_switch_to_it((By.XPATH, morningstarFrameXPATH))
                 )
                 waitforload()
-                
+                # make sure all tables have loaded
                 wait.until(
-                    EC.visibility_of_any_elements_located((By.XPATH, '//*[@id="SnapshotBodyContent"]'))
+                    EC.visibility_of_all_elements_located((By.XPATH, "//table"))
                 )
+
+                # wait.until(
+                #     EC.visibility_of_all_elements_located((By.XPATH, "//table[contains(@class, 'right')]"))
+                # )
+                # Make sure company profile has loaded
+                companyProfileXPATH = "/html/body/div[2]/div[2]/form/div[4]/div[2]/div/div/div[3]/div[3]/div[1]/h2"
+                wait.until(
+                    EC.text_to_be_present_in_element((By.XPATH, companyProfileXPATH), "Company Profile")
+                )
+                wait.until(
+                    EC.presence_of_element_located((By.XPATH, '//*[@id="CompanyProfile"]'))
+                )
+
                 html = browser.page_source 
                 soup = BeautifulSoup(html, 'lxml')
                 saveHtmlToFile(str(soup.prettify()), f'{asset}_overview')
@@ -755,7 +763,7 @@ class Portfolio:
                 #downloadFactsheet(browser, asset, downloadDir)
                  
             except (TimeoutException, NoSuchElementException) as e:
-                print(e)
+                raise(e)
              
         # update stocks class variable
         print(df.to_string())
