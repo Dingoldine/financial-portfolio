@@ -300,13 +300,11 @@ def loginToAvanza(url, payload):
 
     headerLoginButtonXPATH = "/html/body/aza-app/div/div/aza-header/div/aza-header-login/button"
     
-    inputfieldXPATH = "/html/body/aza-app/aza-right-overlay-area/aside/ng-component/ \
-    aza-login-overlay/aza-right-overlay-template/div[2]/div/aza-login/div/ \
-    aza-toggle-switch-view/div/aza-bank-id/form/div[1]/div[2]/input"
+    inputfieldXPATH = "/html/body/aza-app/aza-right-overlay-area/aside/ng-component/aza-login-overlay/ \
+    aza-right-overlay-template/main/div/aza-login/div/aza-toggle-switch-view/div/aza-bank-id/form/div[1]/div[2]/input"
 
-    loginButtonXPATH = "/html/body/aza-app/aza-right-overlay-area/aside/ng-component/ \
-    aza-login-overlay/aza-right-overlay-template/div[2]/div/aza-login/div/ \
-    aza-toggle-switch-view/div/aza-bank-id/form/div[1]/div[2]/button[1]"
+    loginButtonXPATH = "/html/body/aza-app/aza-right-overlay-area/aside/ng-component/aza-login-overlay/ \
+    aza-right-overlay-template/main/div/aza-login/div/aza-toggle-switch-view/div/aza-bank-id/form/div[1]/div[2]/button[1]"
     time.sleep(2)
     try:
         headerLogin =  WebDriverWait(browser, waitingTime).until(
@@ -357,17 +355,15 @@ if __name__ == '__main__':
     }
 
     # login and get new data
-    #browser = loginToAvanza(login_url, payload)
+    # browser = loginToAvanza(login_url, payload)
 
-    #html = get_portfolio(browser)
+    # html = get_portfolio(browser)
 
-    #Utils.saveTxtFile(html, 'htmlAvanza') 
+    # Utils.saveTxtFile(html, 'htmlAvanza') 
 
     # use old data
     html = Utils.readTxtFile('htmlAvanza')
 
-
-    
     # run 
     dataframes = parseHTML(html)
 
@@ -376,6 +372,7 @@ if __name__ == '__main__':
     portfolio = initiatePortfolio()
     portfolio.checkRules()
     portfolio.fundsBreakdown() 
-    portfolio.scrapeNasdaq()
+
+    #portfolio.stocksBreakdown()
+    #portfolio.scrapeNasdaq()
     portfolio.saveStockInfoToExcel()
-    portfolio.readStockInfoFromExcel('Kindred Group')

@@ -20,7 +20,7 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.common.action_chains import ActionChains
-from selenium.common.exceptions import NoSuchElementException, TimeoutException
+from selenium.common.exceptions import NoSuchElementException, TimeoutException, UnexpectedAlertPresentException
 from bs4 import BeautifulSoup
 import time
 from collections import OrderedDict
@@ -34,6 +34,10 @@ import os
 import sys
 import re
 import shutil
+
+# for complex string matching
+from fuzzywuzzy import fuzz, process
+
 try:  
    alphaVantageKey = os.environ.get("ALPHA_VANTAGE_APIKEY")
    iexCloudKey = os.environ.get("IEX_CLOUD_APIKEY")
@@ -63,14 +67,15 @@ class Portfolio:
     max_single_stock = 0.2
 
     # target weight for funds 
-    target_global = 0.4
-    target_eu = 0.15
-    target_nordic = 0.2
-    target_developing_markets = 0.15
+    target_global = 0.5
+    target_eu = 0.1
+    target_nordic = 0.1
+    target_developing_markets = 0.2
     target_bonds = 0.1 
+    target_alternative = 0
 
     def __init__(self, stocks, funds, etfs, certificates, misc):
-
+        assert(self.target_bonds + self.target_developing_markets + self.target_global + self.target_nordic + self.target_alternative + self.target_eu == 1)
         s, f, c = self.cleanAndRename(stocks, funds, etfs, certificates)
         self.stocks = s
         self.funds = f
@@ -79,13 +84,16 @@ class Portfolio:
 
     def cleanAndRename(self, stocks, funds, etfs, cert):
         unnecessary_columns = ['Unnamed: 0', '+/- %', 'Konto', 'Senast', 'Tid']
-        new_column_names = ['Asset', 'Amount', 'Purchase', 'MarketValue', 'Change', 'Profit']
+        new_column_names = ['Asset', 'Amount', 'Purchase', 'Market Value', 'Change', 'Profit']
         
         stocks = stocks.drop(unnecessary_columns, axis=1)
         stocks.columns = new_column_names
         
-        cert = cert.drop(unnecessary_columns, axis=1)
-        cert.columns = new_column_names
+        if(cert != None):
+            cert = cert.drop(unnecessary_columns, axis=1)
+            cert.columns = new_column_names
+        else:
+            cert = pd.DataFrame(columns=new_column_names) 
 
         frames = [funds, etfs]
         concat_funds = pd.concat(frames, keys=['Funds', 'ETFs'])
@@ -95,13 +103,13 @@ class Portfolio:
         return (stocks,concat_funds, cert)
 
     def checkRules(self):
-        stock_value = self.stocks.MarketValue.sum()
-        funds_value = self.funds.MarketValue.sum() 
-        cert_value = self.certificates.MarketValue.sum()
+        stock_value = self.stocks['Market Value'].sum()
+        funds_value = self.funds['Market Value'].sum()
+        cert_value = self.certificates['Market Value'].sum()
 
-        self.stocks['Weight'] = self.stocks.MarketValue /  stock_value
-        self.funds['Weight'] = self.funds.MarketValue /  funds_value
-        self.certificates['Weight'] = self.certificates.MarketValue /  cert_value
+        self.stocks['Weight'] = self.stocks['Market Value'] /  stock_value
+        self.funds['Weight'] = self.funds['Market Value'] /  funds_value
+        self.certificates['Weight'] = self.certificates['Market Value'] /  cert_value
 
         portfolio_value = stock_value + funds_value + cert_value
 
@@ -315,7 +323,7 @@ class Portfolio:
         
         ######################################
 
-        wb = Utils.readExcel('ctryprem2020')
+        wb = Utils.readExcel('ctryprem2020.xlsx')
         #sheet_names = wb.sheet_names()
         #print('Sheet Names', sheet_names)
         erpByCountry = wb.sheet_by_name('ERPs by country')
@@ -421,30 +429,90 @@ class Portfolio:
         df['Region'] = df.apply(conditions, axis=1)
         
         # Calculate Equity Weights
-        em = df[(df.Region == 'Emerging Markets') & (df.Type == 'Equity')].Weight.sum().round(3)
-        glob = df[(df.Region == 'Global') & (df.Type == 'Equity')].Weight.sum().round(3)
-        nord = df[((df.Region == 'Nordics') | (df.Region == 'Sweden')) & (df.Type == 'Equity')].Weight.sum().round(3)
-        eur = df[(df.Region == 'Europe') & (df.Type == 'Equity')].Weight.sum().round(3)
+        em = df[(df.Region == 'Emerging Markets') & (df.Type == 'Equity')].Weight.sum()
+        glob = df[(df.Region == 'Global') & (df.Type == 'Equity')].Weight.sum()
+        nord = df[((df.Region == 'Nordics') | (df.Region == 'Sweden')) & (df.Type == 'Equity')].Weight.sum()
+        eur = df[(df.Region == 'Europe') & (df.Type == 'Equity')].Weight.sum()
 
-        #Utils.printDf(df)
         # Calculate Fixed Income Weights
-        interests = df[df.Type == 'Fixed Income'].Weight.sum().round(3)
+        interests = df[df.Type == 'Fixed Income'].Weight.sum()
 
         # Calulate Alternative Fund Weights 
-        alternative = df[df.Type == 'Alternative'].Weight.sum().round(3)
+        alternative = df[df.Type == 'Alternative'].Weight.sum()
 
         # Assert portfolio weight sums to 1
-        assert(em + glob + nord + eur + interests + alternative == 1)
-        # print fund rule check
+        
+        assert((em + glob + nord + eur + interests + alternative) == 1)
+
+        # print fund allocation
         print('EMERGING MARKETS EQUITY:', em)
         print('GLOBAL EQUITY:', glob)
         print('SWEDEN(NORDICS) EQUITY:', nord)
         print('EUROZONE EQUITY:', eur)
         print('FIXED INCOME', interests)
-        print('ALTERNATIVE INVESTMENTS:', interests)
+        print('ALTERNATIVE INVESTMENTS:', alternative)
 
+        def rebalance(w, t):
+            '''Rebalancing function that assumes portfolio value is fix, takes the current weight w and the target weight t 
+            and calculates SEK value to Sell/Buy to achieve target '''
+            totValue = df['Market Value'].sum()
+            totalBuyAmount = 0
+            investedInType = w * totValue
+
+            loops = 0
+            new_weight = w
+            while True:
+                loops += 1
+                # break when close enough or loops is at max limit
+                if(np.isclose(new_weight, t, rtol=1e-03, atol=1e-04) or loops == 20000):
+                    #print(new_weight ,totalBuyAmount, t, loops)
+                    break
+
+                # Underweight 
+                if (new_weight <= t):
+                
+                    # current SEK amounts
+                    investedInType += 100
+                    totalBuyAmount += 100
+                    new_weight = investedInType/totValue
+                    
+
+                # Overweight
+                if (new_weight >= t):
+                
+                    # decrease by 100kr
+                    investedInType -= 100
+                    totalBuyAmount -= 100
+                    
+                    new_weight = investedInType/totValue
+                
+            return totalBuyAmount
+        
+        x = rebalance(em,  self.target_developing_markets)
+
+        y = rebalance(glob, self.target_global)
+
+        z = rebalance(nord,  self.target_nordic)
+
+        å = rebalance(eur, self.target_eu)
+
+        ä = rebalance(interests, self.target_bonds)
+
+        ö = rebalance(alternative, self.target_alternative)
+
+        # make sure margin of error is between these two ranges
+        assert(-500 < x + y+ z+ å + ä + ö < 500)
+        print('Adjust EM', x, 'KR')
+        print('Adjust Glob', y , 'KR')
+        print('Adjust Nord', z , 'KR')
+        print('Adjust EUR', å, 'KR')
+        print('Adjust Fixed income', ä, 'KR')
+        print('Adjust Alternative', ö, 'KR')
+        Utils.printDf(df)
+        
         print("#################### END OF FUNDS #####################")
         
+
 
     def modifyAllocationDF(self, df):
         df.loc[:,'Weight'] = df.sum(axis=1)  # take the sum accros each row and store in new col Weight
@@ -579,16 +647,68 @@ class Portfolio:
                 ]
             # save to file
             Excel.create(dataframes, asset, 1)
-    
-    def readStockInfoFromExcel(self, asset):
-        keys = ['Margins (in % of sales)', 'Profitability', 'Compound Revenue Growth', 
-        'Compound OpMargin Growth', ' EPS Growth', 'Cash Flow', 'Balance Sheet Items(in % Terms)', 
-        'Liquidity-Financial Health', 'Efficiency', 'Income Statement Summary', 'Balance Sheet Summary', 
-        'Cash Flow Summary', 'Ratios', 'Dividends']
-        # df_map = pd.read_excel(f'{saveLocation}/portfolio.xlsx', sheet_name=None)
+            Utils.printDf(self.stocks)
+
 
     def stocksBreakdown(self):
-        pass
+        df = self.stocks
+        Utils.printDf(df)
+        wb =  Utils.readExcel('indname.xls')
+        sheet_names = wb.sheet_names()
+        # print('Sheet Names', sheet_names)
+        companyExcelList = wb.sheet_by_name('Industry sorted (Global)')
+
+        ## complex string lookup, MIGHT NEED ATTENTION LATER
+        for asset in df['Asset']:
+            matches = {}
+            # Treat this complex case, only one that does not get market correct currently, NEED IMPROVEMENT LATER
+            if (asset == 'SCA B'):
+                asset = 'Svenska Cellulosa Aktiebolaget'
+            for row in range(1, companyExcelList.nrows):
+                excelName = companyExcelList.cell(row, 1).value
+                matchRatio =  fuzz.ratio(excelName.lower(), asset.lower())
+                partialRatio = fuzz.partial_ratio(excelName.lower(), asset.lower())
+                if((matchRatio > 61 and asset.split(' ')[0] + ' ' in excelName) or (partialRatio > 75 and asset.split(' ')[0] + ' ' in excelName)):
+                    # print('partial:', partialRatio, 'full:', matchRatio)
+                    # print(asset, excelName)
+                    industryGroup = companyExcelList.cell(row, 0).value
+                    ticker = companyExcelList.cell(row, 2).value
+                    country = companyExcelList.cell(row, 3).value
+                    broadRegion = companyExcelList.cell(row, 4).value
+                    subRegion = companyExcelList.cell(row, 5).value
+                    # print(asset, excelName, industryGroup, ticker, country, broadRegion, subRegion)
+                    matches[excelName] = [ticker, country, broadRegion, subRegion, industryGroup]
+                    
+
+            if len(matches) > 1:
+                highest = process.extractOne(asset.lower(), list(matches.keys()))
+                d = matches.get(highest[0])
+            
+            elif len(matches) < 1:
+                #print('NO MATCH:', asset) 
+                d = []
+            else:
+                d = list(matches.values())[0] 
+
+            # reverse special case
+            if asset == 'Svenska Cellulosa Aktiebolaget':
+                asset = 'SCA B'
+
+            if len(d) > 0:
+                df.loc[df['Asset'] == asset, 'Ticker'] = d[0]
+                df.loc[df['Asset'] == asset, 'Country'] = d[1]
+                df.loc[df['Asset'] == asset, 'Broad Region'] = d[2]
+                df.loc[df['Asset'] == asset, 'Sub Region'] = d[3]
+                df.loc[df['Asset'] == asset, 'Industry Group'] = d[4]
+            
+            financialsWB = Utils.readExcel(f'{asset}.xlsx')
+
+            
+
+        Utils.printDf(df)
+    
+        
+
 
     def scrapeNasdaq(self):
         df = self.stocks
@@ -613,44 +733,84 @@ class Portfolio:
         
         # poll for elements for 5 seconds max, before shutdown
         browser.implicitly_wait(0)
-        wait = WebDriverWait(browser, 30)
+        wait = WebDriverWait(browser, 35)
 
         def waitforload():
              wait.until(lambda d: d.execute_script(
                 'return (document.readyState == "complete" || document.readyState == "interactive")')
             )
 
+        def switchToMorningstarFrame():
+            morningstarFrameXPATH = '//*[@id="MorningstarIFrame"]'
+            retries = 0
+            while retries < 5:  
+                try:
+                    print('Waiting for Iframe and Iframe Tables:')
+                    print('Attempt Number:', retries + 1)
+                    # wait for iframe to be availible
+                    wait.until(
+                        EC.frame_to_be_available_and_switch_to_it((By.XPATH, morningstarFrameXPATH))
+                    )
+                    # wait for all tables to load
+                    wait.until(
+                        EC.visibility_of_all_elements_located((By.XPATH, "//table"))
+                    )   
+                    return
+                except (UnexpectedAlertPresentException, TimeoutException) as e:
+                    browser.refresh()
+                    retries += 1
+            raise(e)
+
+        def clickElement(XPATH):
+            retries = 0
+            while retries < 5:
+                print('Clicking Element:', XPATH)
+                print('Attempt Number:', retries + 1)
+                try:
+                    button = wait.until(
+                        EC.element_to_be_clickable((By.XPATH, XPATH))
+                    )
+                    button.click()
+                    waitforload()
+                    return
+                except (TimeoutException, NoSuchElementException) as e:
+                    browser.refresh()
+                    retries += 1
+            
+            raise(e)
+
         url = "http://www.nasdaqomxnordic.com/shares"
 
         #wait for javascipt to load then scrape
         browser.get(url)
-        waitforload()
+    
         midCapXPATH = "/html/body/section/div/div/div/section/div/article/div/section/form/div[4]/ul/li[2]"
         smallCapXPATH = "/html/body/section/div/div/div/section/div/article/div/section/form/div[4]/ul/li[3]"
         # searchFieldXPATH = "/html/body/section/div/div/div/section/div/article/div/div[2]/table[1]/thead/tr[2]/td[2]/input"
-        midcapCheckbox = wait.until(
-            EC.element_to_be_clickable((By.XPATH, midCapXPATH))
-        )
-        midcapCheckbox.click()
-        smallcapCheckbox = wait.until(
-            EC.element_to_be_clickable((By.XPATH, smallCapXPATH))
-        )
-        smallcapCheckbox.click()
+        # midcapCheckbox = wait.until(
+        #     EC.element_to_be_clickable((By.XPATH, midCapXPATH))
+        # )
+        #midcapCheckbox.click()
+        clickElement(midCapXPATH)
+        # smallcapCheckbox = wait.until(
+        #     EC.element_to_be_clickable((By.XPATH, smallCapXPATH))
+        # )
+        # smallcapCheckbox.click()
+        clickElement(smallCapXPATH)
 
-        # wait for table to update
-        waitforload()
+        ## Wait until table loading dissapears
         loadingImgXPATH = "/html/body/section/div/div/div/section/div/article/div/div[2]/img"
         wait.until(
             EC.invisibility_of_element_located((By.XPATH, loadingImgXPATH))
         )
         
+        ## add links to dicts 
         myDict = {}
         notFound = []
         print("Searching For Assets In Main Market...")
         for assetName in df['Asset']:
             try:
                 asset = browser.find_element(By.XPATH, f'/html/body/section/div/div/div/section/div/article/div/div[2]/table[1]/tbody/tr/td/a[.="{assetName}"]')
-                #print(str(asset.get_attribute("innerHTML")).strip(), asset.get_attribute("href"))
                 #add to dict
                 myDict[str(asset.get_attribute("innerHTML")).strip()] = asset.get_attribute("href")
             except NoSuchElementException:
@@ -660,22 +820,24 @@ class Portfolio:
         if len(notFound) > 0:
             print("Searching For Assets In First North...")
             firstNorthXPATH = '/html/body/section/div/div/div/section/div/article/div/section/form/div[1]/div/label[2]'
-            firstNorthCheckbox = wait.until(
-                EC.element_to_be_clickable((By.XPATH, firstNorthXPATH))
-            )
-            coordinates = firstNorthCheckbox.location_once_scrolled_into_view
+            # firstNorthCheckbox = wait.until(
+            #     EC.element_to_be_clickable((By.XPATH, firstNorthXPATH))
+            # )
+            # coordinates = firstNorthCheckbox.location_once_scrolled_into_view
         
-            browser.execute_script(f'window.scrollTo({coordinates["x"]}, {coordinates["y"]});') #scroll to element
-            ActionChains(browser).move_to_element(firstNorthCheckbox).perform() #hover over 
-            firstNorthCheckbox.click() #click
-                                
+            # browser.execute_script(f'window.scrollTo({coordinates["x"]}, {coordinates["y"]});') #scroll to element
+            # ActionChains(browser).move_to_element(firstNorthCheckbox).perform() #hover over 
+            # firstNorthCheckbox.click() #click
+            clickElement(firstNorthXPATH)                  
             firstNorthGMXPATH = "/html/body/section/div/div/div/section/div/article/div/section/form/div[5]/ul/li[2]"
-            firstNorthGMCheckbox = wait.until(
-                EC.element_to_be_clickable((By.XPATH, firstNorthGMXPATH))
-            )
-            firstNorthGMCheckbox.click()
+            # firstNorthGMCheckbox = wait.until(
+            #     EC.element_to_be_clickable((By.XPATH, firstNorthGMXPATH))
+            # )
+            # firstNorthGMCheckbox.click()
+            clickElement(firstNorthGMXPATH)
             
-            # wait for table to update
+            
+            ## Wait until table loading dissapears
             wait.until(
                 EC.invisibility_of_element_located((By.XPATH, loadingImgXPATH))
             )
@@ -692,53 +854,58 @@ class Portfolio:
         for asset, href in myDict.items(): 
             try:
                 browser.get(href)
-                keyRatiosXPATH = "/html/body/section/div/div/div/section/section/section/nav/ul/li[4]/a"
-                keyRatiosLink = wait.until(
-                    EC.element_to_be_clickable((By.XPATH, keyRatiosXPATH))
-                )
-                coordinates = keyRatiosLink.location_once_scrolled_into_view
-                browser.execute_script(f'window.scrollTo({coordinates["x"]}, {coordinates["y"]});') #scroll to element
-                ActionChains(browser).move_to_element(keyRatiosLink).perform() #hover over 
-                keyRatiosLink.click()
 
+                # waitforload()
+                # scroll to top
+                # browser.execute_script("window.scrollTo(0, -document.body.scrollHeight)")
+                
+                keyRatiosXPATH = "/html/body/section/div/div/div/section/section/section/nav/ul/li[4]/a"
+                
+                # keyRatiosLink = wait.until(
+                #     EC.element_to_be_clickable((By.XPATH, keyRatiosXPATH))
+                # )
+                # coordinates = keyRatiosLink.location_once_scrolled_into_view
+                # browser.execute_script(f'window.scrollTo({coordinates["x"]}, {coordinates["y"]});') #scroll to element
+                # ActionChains(browser).move_to_element(keyRatiosLink).perform() #hover over 
+                # keyRatiosLink.click()
+
+                clickElement(keyRatiosXPATH)
                 # wait for page to load
-                waitforload()
+                
 
                 # Switch to iframe containing morningstar data
-                morningstarFrameXPATH = '//*[@id="MorningstarIFrame"]'  
-                wait.until(
-                    EC.frame_to_be_available_and_switch_to_it((By.XPATH, morningstarFrameXPATH))
-                )
+                switchToMorningstarFrame()
                 
-                keyRatioTables = wait.until(
-                    EC.visibility_of_all_elements_located((By.XPATH, "//table"))
-                )
+                # keyRatioTables = wait.until(
+                #     EC.visibility_of_all_elements_located((By.XPATH, "//table"))
+                # )
 
                 # Get Page Source
                 html = browser.page_source 
-                # tables = browser.find_elements(By.XPATH, "//table")
+                
             
                 soup = BeautifulSoup(html, 'lxml')
-                saveHtmlToFile(str(soup.prettify()), f'{asset}_keyRatios')
+                Utils.saveTxtFile(str(soup.prettify()), f'{asset}_keyRatios')
                 
                 # switch back to original frame
                 browser.switch_to.default_content()
 
-                overwiewXPATH = "/html/body/section/div/div/div/section/section/section/nav/ul/li[2]/a"
-                overwiewLink = wait.until(
-                    EC.element_to_be_clickable((By.XPATH, overwiewXPATH))
-                )
-                overwiewLink.click()
-                
+                overviewXPATH = "/html/body/section/div/div/div/section/section/section/nav/ul/li[2]/a"
+                # overwiewLink = wait.until(
+                #     EC.element_to_be_clickable((By.XPATH, overwiewXPATH))
+                # )
+                # overwiewLink.click()
+                clickElement(overviewXPATH)
                 # wait for Iframe and Iframe content to load
-                wait.until(
-                    EC.frame_to_be_available_and_switch_to_it((By.XPATH, morningstarFrameXPATH))
-                )
-                waitforload()
+                # wait.until(
+                #     EC.frame_to_be_available_and_switch_to_it((By.XPATH, morningstarFrameXPATH))
+                # )
+                switchToMorningstarFrame()
+                # waitforload()
                 # make sure all tables have loaded
-                wait.until(
-                    EC.visibility_of_all_elements_located((By.XPATH, "//table"))
-                )
+                # wait.until(
+                #     EC.visibility_of_all_elements_located((By.XPATH, "//table"))
+                # )
 
                 # wait.until(
                 #     EC.visibility_of_all_elements_located((By.XPATH, "//table[contains(@class, 'right')]"))
@@ -754,11 +921,34 @@ class Portfolio:
 
                 html = browser.page_source 
                 soup = BeautifulSoup(html, 'lxml')
-                saveHtmlToFile(str(soup.prettify()), f'{asset}_overview')
+                Utils.saveTxtFile(str(soup.prettify()), f'{asset}_overview')
 
                 # switch back to original frame
                 browser.switch_to.default_content()
 
+                companyFinancialsXPATH = '/html/body/section/div/div/div/section/section/section/nav/ul/li[5]/a'
+                
+                # financialsLink = wait.until(
+                #     EC.element_to_be_clickable((By.XPATH, companyFinancialsXPATH))
+                # )
+                # financialsLink.click()
+                clickElement(companyFinancialsXPATH)
+                # wait for Iframe and Iframe content to load
+                # wait.until(
+                #     EC.frame_to_be_available_and_switch_to_it((By.XPATH, morningstarFrameXPATH))
+                # )
+                switchToMorningstarFrame()
+                #waitforload()
+                # make sure all tables have loaded
+                # wait.until(
+                #     EC.visibility_of_all_elements_located((By.XPATH, "//table[contains(@class, 'right')]"))
+                # )
+
+                html = browser.page_source 
+                soup = BeautifulSoup(html, 'lxml')
+                Utils.saveTxtFile(str(soup.prettify()), f'{asset}_financials')
+
+                
                 # Download Fact Sheet
                 #downloadFactsheet(browser, asset, downloadDir)
                  
@@ -777,21 +967,6 @@ def organizeDataframe(df):
     df.index.name = None # Remove the name 
     return df
 
-def find_all_iframes(driver):
-    iframes = driver.find_elements_by_xpath("//iframe")
-
-    for index, iframe in enumerate(iframes):
-        # Your sweet business logic applied to iframe goes here.
-        # print(iframe)
-        driver.switch_to.frame(index)
-        try: 
-            elem = driver.find_element(By.XPATH, '/html/body/div[2]/div[2]/form/div[4]/div[2]/div/div/div[3]/div[2]/div[2]/table/tbody[2]/tr[2]/th')
-            print(elem.get_attribute('innerHTML'))
-        except NoSuchElementException:
-            print('not found')
-        driver.switch_to.parent_frame()
-
-
 def downloadFactsheet(browser, name, directory):
     
     factsheetLinkXPATH = "/html/body/section/div/div/div/section/section/section/nav/ul/li[6]/a"
@@ -808,9 +983,5 @@ def downloadFactsheet(browser, name, directory):
     filename = max([directory + "/" + f for f in os.listdir(directory)], key=os.path.getctime)
     shutil.move(os.path.join(directory, filename), os.path.join(directory, newfilename))
 
-def saveHtmlToFile(html, filename):
-    savePath = os.path.abspath(os.getcwd()) + "/text_files"
-    print(f'Saving {filename}.txt')
-    with open(f'{savePath}/{filename}.txt', 'w') as f:
-        f.write(html)
+
 

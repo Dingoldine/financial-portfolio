@@ -1,6 +1,7 @@
 import pandas as pd
 import os
-def create(dataframes, filename, index_level):
+def create(dataframes, filename, index_level=1):
+    '''Takes a list of dataframes and creates an excelfile with given filename, index_level should be 1 if the dataframes has column names '''
     saveLocation = os.path.abspath(os.getcwd()) + "/excel_files"
     writer = pd.ExcelWriter(f'{saveLocation}/{filename}.xlsx', engine='xlsxwriter')
     for df in dataframes:
