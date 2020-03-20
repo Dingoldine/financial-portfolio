@@ -199,7 +199,8 @@ def log_error(e):
     logging.exception("message")
 
 def get_portfolio(browser):
-   
+    """Saves a txt file of all fund detail pages and returns portfolio view html """
+
     portfolioViewLinkXPATH = "/html/body/aza-app/div/main/div/aza-feed-latest/aza-base-page/div/ \
     aza-pull-to-refresh/div/div[2]/aza-page-container/div/div[1]/ \
     aza-feed-development/aza-card/section[5]/a"
@@ -288,6 +289,7 @@ def get_portfolio(browser):
 
 
 def loginToAvanza(url, payload):
+    """Function that log in to Avanza, returns selenium driver object"""
     
     opt = webdriver.FirefoxOptions()
     #opt.add_argument('-headless')
@@ -373,6 +375,6 @@ if __name__ == '__main__':
     portfolio.checkRules()
     portfolio.fundsBreakdown() 
 
-    #portfolio.stocksBreakdown()
     #portfolio.scrapeNasdaq()
     portfolio.saveStockInfoToExcel()
+    portfolio.stocksBreakdown()

@@ -29,7 +29,7 @@ def readExcel(filename):
     try:
     # To open Workbook 
         wb = xlrd.open_workbook(f'{readPath}/{filename}') 
-    except FileNotFoundError:
-        raise(FileNotFoundError)
+    except FileNotFoundError as e:
+        return str(e)
     return wb
   
