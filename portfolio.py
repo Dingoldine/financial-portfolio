@@ -24,8 +24,8 @@ from selenium.common.exceptions import NoSuchElementException, TimeoutException,
 from bs4 import BeautifulSoup
 import time
 from collections import OrderedDict
-from modules import Excel, Utils
-
+from helpermodules import Excel, Utils
+import constants
 #load .env file 
 from dotenv import load_dotenv
 load_dotenv()
@@ -74,13 +74,34 @@ class Portfolio:
     target_bonds = 0.1 
     target_alternative = 0
 
-    def __init__(self, stocks, funds, etfs, certificates, misc):
-        assert(self.target_bonds + self.target_developing_markets + self.target_global + self.target_nordic + self.target_alternative + self.target_eu == 1)
+    def __init__(self):
+        assert(self.target_bonds + self.target_developing_markets + self.target_global + \
+            self.target_nordic + self.target_alternative + self.target_eu == 1) # make sure fund allocation rules make sense
+        
+        # for pandas version >= 0.21.0
+        df_map = pd.read_excel(f'{constants.excelSaveLocation}/portfolio.xlsx', sheet_name=None)
+        stocks = df_map.get("Stocks", None)
+        funds = df_map.get("Funds", None)
+        etfs = df_map.get("ETFs", None)
+        certificates = df_map.get("Certificates", None)
+        summary = df_map.get("Potfolio Summary", None)
+        
         s, f, c = self.cleanAndRename(stocks, funds, etfs, certificates)
         self.stocks = s
         self.funds = f
         self.certificates = c
-        self.misc = misc
+        self.misc = summary
+
+
+        self.stocks_value = self.stocks['Market Value'].sum()
+        self.funds_value = self.funds['Market Value'].sum()
+        self.cert_value = self.certificates['Market Value'].sum()
+
+        self.portfolio_value = self.stocks_value + self.funds_value + self.cert_value
+
+        self.stocks['Weight'] = self.stocks['Market Value'] /  self.stocks_value
+        self.funds['Weight'] = self.funds['Market Value'] /  self.funds_value
+        self.certificates['Weight'] = self.certificates['Market Value'] /  self.cert_value
 
     def cleanAndRename(self, stocks, funds, etfs, cert):
         unnecessary_columns = ['Unnamed: 0', '+/- %', 'Konto', 'Senast', 'Tid']
@@ -88,8 +109,8 @@ class Portfolio:
         
         stocks = stocks.drop(unnecessary_columns, axis=1)
         stocks.columns = new_column_names
-        
-        if(cert != None):
+
+        if(cert is not None):
             cert = cert.drop(unnecessary_columns, axis=1)
             cert.columns = new_column_names
         else:
@@ -103,27 +124,19 @@ class Portfolio:
         return (stocks,concat_funds, cert)
 
     def checkRules(self):
-        stock_value = self.stocks['Market Value'].sum()
-        funds_value = self.funds['Market Value'].sum()
-        cert_value = self.certificates['Market Value'].sum()
 
-        self.stocks['Weight'] = self.stocks['Market Value'] /  stock_value
-        self.funds['Weight'] = self.funds['Market Value'] /  funds_value
-        self.certificates['Weight'] = self.certificates['Market Value'] /  cert_value
 
-        portfolio_value = stock_value + funds_value + cert_value
+        stock_weight = self.stocks_value/self.portfolio_value
+        fund_weight = self.funds_value/self.portfolio_value
+        cert_weight = self.cert_value/self.portfolio_value
 
-        stock_weight = stock_value/portfolio_value
-        fund_weight = funds_value/portfolio_value
-        cert_weight = cert_value/portfolio_value
-
+        # REDO WITH NUMPY CLOSE TO
         allowedStockTargetDeviation = 0.03
         print('stock weight', stock_weight.round(3))
         if not ( Portfolio.tot_weight_stocks - allowedStockTargetDeviation <= stock_weight):
             print('too little money in  stocks')
         elif not( stock_weight <= Portfolio.tot_weight_stocks  + allowedStockTargetDeviation):
             print('too much money in stocks')
-    
             
         allowedFundTargetDeviation = 0.03
         print('fund weight', (fund_weight+cert_weight).round(3))
@@ -141,58 +154,8 @@ class Portfolio:
         keyData = soup.find_all('div', {'class': 'border-space-item'})
         
         keyDataDict = {'Fee': fee}
-        translationDict = {
-            'Typ': 'Type',
-            'Alternativa': 'Alternative',
-            'Aktiefond': 'Equity',
-            'Räntefond': 'Fixed Income',
-            'Kategori': 'Category',
-            'Hedgefond, Multi-strategi': 'Hedgefund, Multi-strategy',
-            'Tillväxtmarknader': 'Emerging Markets',
-            'Global, Mix bolag': 'Global Mix',
-            'Global, Småbolag': 'Global Small Cap',
-            'Ränte - SEK obligationer, Företag': 'Corporate Bonds SEK',
-            'Sverige': 'Sweden',
-            'Europa, Mix bolag': 'Europe Mix',
-            'Ränte - övriga obligationer': 'Fixed Income MISC',
-            'Asien ex Japan': 'Asia ex Japan',
-            'Jämförelseindex': 'Index',
-            'Indexfond': 'Index Fund',
-            'Fondens startdatum': 'Start date',
-            'Fondbolag': 'Company',
-            'Hemsida': 'Website',
-            'Legalt säte': 'Registered In',
-            'Antal ägare hos Avanza': 'Owners at Avanza',
-            'Förvaltat kapital': 'AUM',
-            'Standardavvikelse': 'Standard Deviation',
-            'Sharpekvot': 'Sharpe Ratio',
-            'Ja': 'Yes',
-            'Nej': 'No',
-            'Kina': 'China',
-            'Sydkorea': 'Korea',
-            'Storbritannien': 'United Kingdom',
-            'Kanada': 'Canada',
-            'Frankrike': 'France',
-            'Schweiz': 'Switzerland',
-            'Brasilien': 'Brazil',
-            'Sydafrika': 'South Africa',
-            'Nederländerna': 'Netherlands',
-            'Ryssland': 'Russia',
-            'Italien': 'Italy',
-            'Spanien': 'Spain',
-            'Belgien': 'Belgium',
-            'Saudiarabien': 'Saudi Arabia',
-            'Mexiko': 'Mexico',
-            'Indonesien': 'Indonesia',
-            'Filippinerna': 'Philippines',
-            'Hongkong': 'Hong Kong',
-            'Norge': 'Norway',
-            'Danmark': 'Denmark',
-            'Indien': 'India',
-            'Australien': 'Australia',
-            'Tyskland': 'Germany',
-            'USA': 'United States'
-        }
+
+        translationDict = constants.translationDict
 
         for div in keyData:
             key = div.label.text.strip()
@@ -932,7 +895,7 @@ class Portfolio:
 
                 # switch back to original frame
                 browser.switch_to.default_content()
-                
+
                 # Download Fact Sheet
                 #downloadFactsheet(browser, asset, downloadDir)
 
@@ -968,6 +931,4 @@ def downloadFactsheet(browser, name, directory):
     newfilename = f'{name}.pdf'
     filename = max([directory + "/" + f for f in os.listdir(directory)], key=os.path.getctime)
     shutil.move(os.path.join(directory, filename), os.path.join(directory, newfilename))
-
-
 

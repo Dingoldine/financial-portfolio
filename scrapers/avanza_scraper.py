@@ -6,7 +6,7 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 
-from modules import Excel, Utils
+from helpermodules import Excel, Utils
 
 import time
 import inspect
@@ -15,12 +15,11 @@ import numpy as np
 import csv
 import pandas as pd
 import re
-from Portfolio import Portfolio
 import sys, os
 myself = lambda: inspect.stack()[1][3]
 
 
-def parseTable(table):
+def _parseTable(table):
 
     n_rows=0
     column_names = []
@@ -69,7 +68,7 @@ def parseTable(table):
 
     return column_names, rows
 
-def parseHTML(data):
+def _parseHTML(data):
     try:
         soup  = BeautifulSoup(data, 'lxml')
 
@@ -83,8 +82,8 @@ def parseHTML(data):
             if(captionTag != None):
                 caption = captionTag.text.strip()
                 #print(table.prettify())
-                headers, rows = parseTable(table)
-                df, err = buildDataframe(headers, rows, caption) 
+                headers, rows = _parseTable(table)
+                df, err = _buildDataframe(headers, rows, caption) 
                 #Utils.printDf(df)f
                 if(err):
                     continue
@@ -97,7 +96,7 @@ def parseHTML(data):
         log_error(e)
 
 
-def buildDataframe(headers, rows, caption):
+def _buildDataframe(headers, rows, caption):
     print(caption)
 
     def stocks(headers, rows):
@@ -198,7 +197,7 @@ def log_error(e):
     """
     logging.exception("message")
 
-def get_portfolio(browser):
+def _get_portfolio(browser):
     """Saves a txt file of all fund detail pages and returns portfolio view html """
 
     portfolioViewLinkXPATH = "/html/body/aza-app/div/main/div/aza-feed-latest/aza-base-page/div/ \
@@ -288,7 +287,7 @@ def get_portfolio(browser):
         browser.quit()
 
 
-def loginToAvanza(url, payload):
+def _loginToAvanza(url, payload):
     """Function that log in to Avanza, returns selenium driver object"""
     
     opt = webdriver.FirefoxOptions()
@@ -335,20 +334,7 @@ def loginToAvanza(url, payload):
         browser.quit()
         sys.exit(e)
 
-        
-def initiatePortfolio():
-    # for pandas version >= 0.21.0
-    saveLocation = os.path.abspath(os.getcwd()) + "/excel_files"
-    df_map = pd.read_excel(f'{saveLocation}/portfolio.xlsx', sheet_name=None)
-    stocks = df_map.get("Stocks", None)
-    funds = df_map.get("Funds", None)
-    etfs = df_map.get("ETFs", None)
-    certif = df_map.get("Certificates", None)
-    summary = df_map.get("Potfolio Summary", None)
-    return Portfolio(stocks, funds, etfs, certif, summary)
-
-
-if __name__ == '__main__':
+def scrape():
 
     login_url = 'https://www.avanza.se/start/startsidan.html(right-overlay:login/login-overlay)'
 
@@ -357,24 +343,20 @@ if __name__ == '__main__':
     }
 
     # login and get new data
-    # browser = loginToAvanza(login_url, payload)
+    browser = _loginToAvanza(login_url, payload)
 
-    # html = get_portfolio(browser)
+    html = _get_portfolio(browser)
 
-    # Utils.saveTxtFile(html, 'htmlAvanza') 
+    Utils.saveTxtFile(html, 'htmlAvanza') 
 
-    # use old data
-    html = Utils.readTxtFile('htmlAvanza')
-
-    # run 
-    dataframes = parseHTML(html)
+    dataframes = _parseHTML(html)
 
     Excel.create(dataframes, 'portfolio', 1) 
     
-    portfolio = initiatePortfolio()
-    portfolio.checkRules()
-    portfolio.fundsBreakdown() 
+    # portfolio = initiatePortfolio()
+    # portfolio.checkRules()
+    # portfolio.fundsBreakdown() 
 
-    #portfolio.scrapeNasdaq()
-    portfolio.saveStockInfoToExcel()
-    portfolio.stocksBreakdown()
+    # #portfolio.scrapeNasdaq()
+    # portfolio.saveStockInfoToExcel()
+    # portfolio.stocksBreakdown()

@@ -2,14 +2,14 @@ import pandas as pd
 import pandas.io.formats.excel
 import os
 pandas.io.formats.excel.ExcelFormatter.header_style = None
-saveLocation = os.path.abspath(os.getcwd()) + "/excel_files"
+import constants
 
 def create(dataframes, filename, index_level=1, currency = None):
     '''Takes a list of dataframes and creates an excelfile with given filename, \
     index_level should be 1 if the dataframes has column names. \
     Default currency information is None, provide a string explaining currency of items in Dataframe if necessary.'''
 
-    writer = pd.ExcelWriter(f'{saveLocation}/{filename}.xlsx', engine='xlsxwriter')
+    writer = pd.ExcelWriter(f'{constants.excelSaveLocation}/{filename}.xlsx', engine='xlsxwriter')
     for df in dataframes:
         df.to_excel(writer, df.name)
         # add index widths formatting
