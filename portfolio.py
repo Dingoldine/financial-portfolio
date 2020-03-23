@@ -13,14 +13,8 @@ import intrinio_sdk
 from intrinio_sdk.rest import ApiException
 from pprint import pprint
 
-# scraping 
-from selenium import webdriver
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
-from selenium.webdriver.common.by import By
-from selenium.webdriver.common.keys import Keys
-from selenium.webdriver.common.action_chains import ActionChains
-from selenium.common.exceptions import NoSuchElementException, TimeoutException, UnexpectedAlertPresentException, ElementClickInterceptedException
+import constants
+
 from bs4 import BeautifulSoup
 import time
 from collections import OrderedDict
@@ -33,7 +27,7 @@ load_dotenv()
 import os
 import sys
 import re
-import shutil
+
 
 # for complex string matching
 from fuzzywuzzy import fuzz, process
@@ -80,19 +74,16 @@ class Portfolio:
         
         # for pandas version >= 0.21.0
         df_map = pd.read_excel(f'{constants.excelSaveLocation}/portfolio.xlsx', sheet_name=None)
-        stocks = df_map.get("Stocks", None)
+        self.stocks = df_map.get("Stocks", None)
         funds = df_map.get("Funds", None)
         etfs = df_map.get("ETFs", None)
-        certificates = df_map.get("Certificates", None)
-        summary = df_map.get("Potfolio Summary", None)
+        # merge ETFs and funds
+        frames = [funds, etfs]
+        concat_funds = pd.concat(frames, keys=['Funds', 'ETFs'])
+        self.funds = concat_funds
+        self.certificates = df_map.get("Certificates", None)
+        self.summary = df_map.get("Potfolio Summary", None)
         
-        s, f, c = self.cleanAndRename(stocks, funds, etfs, certificates)
-        self.stocks = s
-        self.funds = f
-        self.certificates = c
-        self.misc = summary
-
-
         self.stocks_value = self.stocks['Market Value'].sum()
         self.funds_value = self.funds['Market Value'].sum()
         self.cert_value = self.certificates['Market Value'].sum()
@@ -102,26 +93,6 @@ class Portfolio:
         self.stocks['Weight'] = self.stocks['Market Value'] /  self.stocks_value
         self.funds['Weight'] = self.funds['Market Value'] /  self.funds_value
         self.certificates['Weight'] = self.certificates['Market Value'] /  self.cert_value
-
-    def cleanAndRename(self, stocks, funds, etfs, cert):
-        unnecessary_columns = ['Unnamed: 0', '+/- %', 'Konto', 'Senast', 'Tid']
-        new_column_names = ['Asset', 'Amount', 'Purchase', 'Market Value', 'Change', 'Profit']
-        
-        stocks = stocks.drop(unnecessary_columns, axis=1)
-        stocks.columns = new_column_names
-
-        if(cert is not None):
-            cert = cert.drop(unnecessary_columns, axis=1)
-            cert.columns = new_column_names
-        else:
-            cert = pd.DataFrame(columns=new_column_names) 
-
-        frames = [funds, etfs]
-        concat_funds = pd.concat(frames, keys=['Funds', 'ETFs'])
-        concat_funds = concat_funds.drop(unnecessary_columns, axis=1)
-        concat_funds.columns = new_column_names
-
-        return (stocks,concat_funds, cert)
 
     def checkRules(self):
 
@@ -703,211 +674,6 @@ class Portfolio:
 
         Utils.printDf(self.stocks)
     
-    def scrapeNasdaq(self):
-        df = self.stocks
-        # Scrape Nasdaq Nordic 
-        fp = webdriver.FirefoxProfile()
-        # Set browser preferences
-        downloadDir = os.path.abspath(os.getcwd()) + "/fact_sheets"
-        fp.set_preference("browser.preferences.instantApply",True)
-        fp.set_preference("browser.helperApps.neverAsk.saveToDisk", "text/plain, application/octet-stream, application/binary, text/csv, application/csv, application/excel, text/comma-separated-values, text/xml, application/xml, application/pdf, text/html, application/xhtml+xml, application/xml;q=0.9,*/*;q=0.8")
-        fp.set_preference("browser.helperApps.alwaysAsk.force",False)
-        fp.set_preference("browser.download.manager.showWhenStarting",False)
-        fp.set_preference("browser.download.dir", downloadDir)
-        fp.set_preference("pdfjs.disabled", True)
-        # Use this to disable Acrobat plugin for previewing PDFs in Firefox (if you have Adobe reader installed on your computer)
-        fp.set_preference("plugin.scan.Acrobat", "99.0")
-        fp.set_preference("plugin.scan.plid.all", False)
-        # 0 desktop, 1 Default Download, 2 User defined
-        fp.set_preference("browser.download.folderList", 2)
-        log_path = os.path.abspath(os.getcwd()) + '/geckodriver/geckodriver.log'
-        opt = webdriver.FirefoxOptions()
-        browser = webdriver.Firefox(options=opt, firefox_profile=fp, service_log_path=log_path)
-        
-        # poll for elements for 5 seconds max, before shutdown
-        browser.implicitly_wait(0)
-        wait = WebDriverWait(browser, 35)
-
-        latest_button_xpath = ""
-
-        def waitforload():
-             wait.until(lambda d: d.execute_script(
-                'return (document.readyState == "complete" || document.readyState == "interactive")')
-            )
-
-        def switchToMorningstarFrame():
-            morningstarFrameXPATH = '//*[@id="MorningstarIFrame"]'
-            retries = 0
-            while retries < 5:  
-                try:
-                    print('Waiting for Iframe and Iframe Tables:')
-                    print('Attempt Number:', retries + 1)
-                    # wait for iframe to be availible
-                    wait.until(
-                        EC.frame_to_be_available_and_switch_to_it((By.XPATH, morningstarFrameXPATH))
-                    )
-                    # wait for all tables to load
-                    wait.until(
-                        EC.visibility_of_all_elements_located((By.XPATH, "//table"))
-                    )   
-                    waitforload()
-                    return
-                except (UnexpectedAlertPresentException, TimeoutException) as e:
-                    browser.refresh()
-                    retries += 1
-                    print(latest_button_xpath)
-                    clickElement(latest_button_xpath)
-            raise(e)
-
-        def clickElement(XPATH):
-            retries = 0
-            while retries < 5:
-                print('Clicking Element:', XPATH)
-                print('Attempt Number:', retries + 1)
-                try:
-                    button = wait.until(
-                        EC.element_to_be_clickable((By.XPATH, XPATH))
-                    )
-                    coordinates = button.location_once_scrolled_into_view
-                    browser.execute_script(f'window.scrollTo({coordinates["x"]}, {coordinates["y"]});') #scroll to element
-                    ActionChains(browser).move_to_element(button).perform() #hover ove
-                    button.click()
-                    waitforload()
-                    return
-                except (TimeoutException, NoSuchElementException, ElementClickInterceptedException, \
-                    UnexpectedAlertPresentException) as e:
-                    browser.refresh()
-                    retries += 1
-            
-            raise(e)
-
-        url = "http://www.nasdaqomxnordic.com/shares"
-
-        browser.get(url)
-
-        midCapXPATH = "/html/body/section/div/div/div/section/div/article/div/section/form/div[4]/ul/li[2]"
-        smallCapXPATH = "/html/body/section/div/div/div/section/div/article/div/section/form/div[4]/ul/li[3]"
-
-        clickElement(midCapXPATH)
-
-        clickElement(smallCapXPATH)
-
-        ## Wait until table loading dissapears
-        loadingImgXPATH = "/html/body/section/div/div/div/section/div/article/div/div[2]/img"
-        wait.until(
-            EC.invisibility_of_element_located((By.XPATH, loadingImgXPATH))
-        )
-        
-        ## add links to dicts 
-        foundAssetsDict = {}
-        notFound = []
-        print("Searching For Assets In Main Market...")
-        for assetName in df['Asset']:
-            try:
-                asset = browser.find_element(By.XPATH, f'/html/body/section/div/div/div/section/div/article/div/div[2]/table[1]/tbody/tr/td/a[.="{assetName}"]')
-                #add to dict
-                foundAssetsDict[str(asset.get_attribute("innerHTML")).strip()] = asset.get_attribute("href")
-            except NoSuchElementException:
-                print(f'Could not find  {assetName} in Main Market')
-                notFound.append(assetName)
-        
-        if len(notFound) > 0:
-            print("Searching For Assets In First North...")
-            firstNorthXPATH = '/html/body/section/div/div/div/section/div/article/div/section/form/div[1]/div/label[2]'
-
-            clickElement(firstNorthXPATH)                  
-            firstNorthGMXPATH = latest_button_xpath = "/html/body/section/div/div/div/section/div/article/div/section/form/div[5]/ul/li[2]"
-
-            clickElement(firstNorthGMXPATH)
-            
-            ## Wait until table loading dissapears
-            wait.until(
-                EC.invisibility_of_element_located((By.XPATH, loadingImgXPATH))
-            )
-
-            for assetName in notFound:
-                try:
-                    asset = browser.find_element(By.XPATH, f'/html/body/section/div/div/div/section/div/article/div/div[2]/table[1]/tbody/tr/td/a[.="{assetName}"]')
-                    #add to dict
-                    foundAssetsDict[str(asset.get_attribute("innerHTML")).strip()] = asset.get_attribute("href")
-                except NoSuchElementException:
-                    print("couldnt find: ", assetName, "in First North")
-
-        # EXTRACT RATIOS
-        for asset, href in foundAssetsDict.items(): 
-            try:
-                # go to asset page
-                browser.get(href)
-                
-                keyRatiosXPATH = latest_button_xpath = "/html/body/section/div/div/div/section/section/section/nav/ul/li[4]/a"
-                
-                clickElement(keyRatiosXPATH)
-
-                # Switch to iframe containing morningstar data
-                switchToMorningstarFrame()
-                
-
-                # Get Page Source
-                keyRatiosPage = browser.page_source    
-                soup = BeautifulSoup(keyRatiosPage, 'lxml')
-                Utils.saveTxtFile(str(soup.prettify()), f'{asset}_keyRatios') # Save file
-
-                # switch back to original frame
-                browser.switch_to.default_content()
-
-                overviewXPATH = latest_button_xpath = "/html/body/section/div/div/div/section/section/section/nav/ul/li[2]/a"
-
-                clickElement(overviewXPATH)
-
-                switchToMorningstarFrame()
-
-                # Make sure company profile has loaded
-                companyProfileXPATH = "/html/body/div[2]/div[2]/form/div[4]/div[2]/div/div/div[3]/div[3]/div[1]/h2"
-                wait.until(
-                    EC.text_to_be_present_in_element((By.XPATH, companyProfileXPATH), "Company Profile")
-                )
-                wait.until(
-                    EC.presence_of_element_located((By.XPATH, '//*[@id="CompanyProfile"]'))
-                )
-
-                overviewPage = browser.page_source 
-                soup = BeautifulSoup(overviewPage, 'lxml')
-                Utils.saveTxtFile(str(soup.prettify()), f'{asset}_overview')
-
-                # switch back to original frame
-                browser.switch_to.default_content()
-
-                companyFinancialsXPATH = latest_button_xpath =  '/html/body/section/div/div/div/section/section/section/nav/ul/li[5]/a'
-                
-                clickElement(companyFinancialsXPATH)
-
-                switchToMorningstarFrame()
-
-                # Make sure table content loads
-                incomeStatementCaptionXPATH = "/html/body/div[2]/div[2]/form/div[4]/div[2]/div/div/div[3]/div[2]/table/caption"
-                wait.until(
-                    EC.text_to_be_present_in_element((By.XPATH, incomeStatementCaptionXPATH), "Income Statement")
-                )
-
-                financialsPage = browser.page_source 
-                soup = BeautifulSoup(financialsPage, 'lxml')
-                Utils.saveTxtFile(str(soup.prettify()), f'{asset}_financials')
-
-                # switch back to original frame
-                browser.switch_to.default_content()
-
-                # Download Fact Sheet
-                #downloadFactsheet(browser, asset, downloadDir)
-
-                
-                 
-            except (TimeoutException, NoSuchElementException) as e:
-                raise(e)
-             
-        # update stocks class variable
-        print(df.to_string())
-        self.stocks = df
-        # browser.quit()
 
 def organizeDataframe(df):
     df=df.rename(columns = {'Unnamed: 0': 'Data'}) # rename
@@ -915,20 +681,4 @@ def organizeDataframe(df):
     df.set_index(leftMostCol, inplace=True) # Turn this column to index
     df.index.name = None # Remove the name 
     return df
-
-def downloadFactsheet(browser, name, directory):
-    
-    factsheetLinkXPATH = "/html/body/section/div/div/div/section/section/section/nav/ul/li[6]/a"
-    factsheetLink = wait.until(
-        EC.element_to_be_clickable((By.XPATH, factsheetLinkXPATH))
-    )
-    #instantly downloads the factsheet
-    factsheetLink.click()
-    # wait for download to complete
-    # can optimize line below with event and directory watcher
-    time.sleep(20)
-    # rename the latest file
-    newfilename = f'{name}.pdf'
-    filename = max([directory + "/" + f for f in os.listdir(directory)], key=os.path.getctime)
-    shutil.move(os.path.join(directory, filename), os.path.join(directory, newfilename))
 

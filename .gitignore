@@ -130,7 +130,7 @@ dmypy.json
 
 # CUSTOM
 text_files/
-fact_sheets
+pdf/
 excel_files/
 .vscode/
 geckodriver/

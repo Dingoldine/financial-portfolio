@@ -9,8 +9,8 @@ def create(dataframes, filename, index_level=1, currency = None):
     index_level should be 1 if the dataframes has column names. \
     Default currency information is None, provide a string explaining currency of items in Dataframe if necessary.'''
 
-    writer = pd.ExcelWriter(f'{constants.excelSaveLocation}/{filename}.xlsx', engine='xlsxwriter')
-    for df in dataframes:
+    writer = pd.ExcelWriter(f'{constants.excelSaveLocation}/{filename}.xlsx', engine='xlsxwriter') # pylint: disable=abstract-class-instantiated 
+    for df in dataframes: 
         df.to_excel(writer, df.name)
         # add index widths formatting
         max_index_len = df.index.astype(str).map(len).max() + 1 

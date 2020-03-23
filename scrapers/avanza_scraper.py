@@ -5,8 +5,11 @@ from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
+from selenium.common.exceptions import NoSuchElementException, TimeoutException
 
 from helpermodules import Excel, Utils
+from scrapers._scraping_functions import waitforload, clickElement 
+import constants
 
 import time
 import inspect
@@ -16,7 +19,7 @@ import csv
 import pandas as pd
 import re
 import sys, os
-myself = lambda: inspect.stack()[1][3]
+
 
 
 def _parseTable(table):
@@ -88,17 +91,19 @@ def _parseHTML(data):
                 if(err):
                     continue
                 dataframes.append(df)
-
+        
         return dataframes
 
     except Exception as e:
-        print("Something went wrong in " + myself())
-        log_error(e)
+
+        Utils.log_error(e)
 
 
 def _buildDataframe(headers, rows, caption):
     print(caption)
-
+    unnecessary_columns = ['+/- %', 'Konto', 'Senast', 'Tid']
+    new_column_names = ['Asset', 'Amount', 'Purchase', 'Market Value', 'Change', 'Profit']
+    
     def stocks(headers, rows):
         #cleanup headers
         del headers[-1] #remove "verktyg"
@@ -110,6 +115,11 @@ def _buildDataframe(headers, rows, caption):
             del row[0] #remove sell
         df = pd.DataFrame.from_records(rows, columns=headers)
         df.name = "Stocks"
+        df.drop(unnecessary_columns, axis=1, inplace=True)
+        df.columns = new_column_names
+        leftMostCol = df.columns.values[0]
+        df.set_index(leftMostCol, inplace=True) # Turn this column to index
+        Utils.printDf(df)
         return(df)
 
     def funds(headers, rows):
@@ -127,6 +137,10 @@ def _buildDataframe(headers, rows, caption):
             del row[0]  #rm byt
         df = pd.DataFrame.from_records(rows, columns=headers)
         df.name = "Funds"
+        df.drop(unnecessary_columns, axis=1, inplace=True)
+        df.columns = new_column_names
+        leftMostCol = df.columns.values[0]
+        df.set_index(leftMostCol, inplace=True) # Turn this column to index
         return(df)
 
     def etfs(headers, rows):
@@ -142,6 +156,10 @@ def _buildDataframe(headers, rows, caption):
 
         df = pd.DataFrame.from_records(rows, columns=headers)
         df.name = "ETFs"
+        df.drop(unnecessary_columns, axis=1, inplace=True)
+        df.columns = new_column_names
+        leftMostCol = df.columns.values[0]
+        df.set_index(leftMostCol, inplace=True) # Turn this column to index
         return(df)
 
     def cert(headers, rows):
@@ -155,6 +173,10 @@ def _buildDataframe(headers, rows, caption):
             del row[0]  #rm sell
         df = pd.DataFrame.from_records(rows, columns=headers)
         df.name = "Certificates"
+        df.drop(unnecessary_columns, axis=1, inplace=True)
+        df.columns = new_column_names
+        leftMostCol = df.columns.values[0]
+        df.set_index(leftMostCol, inplace=True) # Turn this column to index
         return(df)
 
     def summary(headers, rows):
@@ -189,13 +211,6 @@ def _buildDataframe(headers, rows, caption):
     df = function(headers, rows)
     return df, None
 
-def log_error(e):
-    """
-    It is always a good idea to log errors. 
-    This function just prints them, but you can
-    make it do anything.
-    """
-    logging.exception("message")
 
 def _get_portfolio(browser):
     """Saves a txt file of all fund detail pages and returns portfolio view html """
@@ -205,17 +220,14 @@ def _get_portfolio(browser):
     aza-feed-development/aza-card/section[5]/a"
 
     try:
-        # go to instruments page
-        portfolio_view = WebDriverWait(browser, 10).until(
-            EC.element_to_be_clickable((By.XPATH, portfolioViewLinkXPATH))
-        )
-        portfolio_view.click()
-
+        clickElement(browser, portfolioViewLinkXPATH, 5)
+        
         # wait for table to load
         fundTableXPATH = "//table[contains(@class, 'groupInstTypeTable')][2]"
         _ = WebDriverWait(browser, 10).until(
             EC.presence_of_element_located((By.XPATH, fundTableXPATH))
         )
+
         # find all fund links
         allLinksXPATH = "//table[contains(@class, 'groupInstTypeTable')][2]// \
         *[contains(@class, 'instrumentName')]//*[contains(@class, 'ellipsis')]/a"
@@ -231,44 +243,20 @@ def _get_portfolio(browser):
             
             fundDetailsButtonXPATH = '/html/body/aza-app/div/main/div/aza-fund-guide/aza-subpage/div/div/ \
             div/div[2]/div[1]/aza-card[2]/div/div[1]/aza-toggle-switch/aza-toggle-option[3]/button'
-            fundDetailsButton = WebDriverWait(browser, 10).until(
-                EC.element_to_be_clickable((By.XPATH, fundDetailsButtonXPATH))
-            )
-            #extra wait for safety
-            time.sleep(1)
-            fundDetailsButton.click()
 
+            clickElement(browser, fundDetailsButtonXPATH, 5)
+
+            # wait for fund details to load
             fundDetailsBoxXPATH = '/html/body/aza-app/div/main/div/aza-fund-guide/ \
             aza-subpage/div/div/div/div[2]/div[1]/aza-card[2]/div/div[2]/div'
-            fundDetailsBox = WebDriverWait(browser, 60).until(
+            _ = WebDriverWait(browser, 60).until(
                 EC.visibility_of_element_located((By.XPATH, fundDetailsBoxXPATH))
             )
-            # extra wait
-            time.sleep(1)
+            
             html = BeautifulSoup(browser.page_source, 'lxml')
 
             Utils.saveTxtFile(str(html.prettify()), instrument)
-            # print(fundDetailsBox.text)
-            # fundDetails = fundDetailsBox.get_attribute('innerHTML')
-           
-            # allocationInfoXPATH = '/html/body/aza-app/div/main/div/aza-fund-guide/aza-subpage/div/div/div/aza-card'
 
-            # allocationInfoElement = WebDriverWait(browser, 10).until(
-            #     EC.visibility_of_element_located((By.XPATH, allocationInfoXPATH))
-            # )
-            # print(allocationInfoElement.text)
-
-            # allocationInfo = allocationInfoElement.get_attribute('innerHTML')
-           
-
-            # totalFeeXPATH = '/html/body/aza-app/div/main/div/aza-fund-guide/aza-subpage/div/div/div/div[2]/div[2]/aza-card[1]/div/h3'
-            
-            # feeElement = WebDriverWait(browser, 10).until(
-            #     EC.visibility_of_element_located((By.XPATH, totalFeeXPATH))
-            # )
-            # fee = feeElement.text
-            # print(fee)
-            # fundDictionary[instrument] = [fundDetails, allocationInfo, fee]
         #go back
         browser.execute_script(f'window.history.go(-{len(fundDictionary)})')
         
@@ -279,9 +267,8 @@ def _get_portfolio(browser):
         return str(soup.prettify())
 
     except Exception as e:
-        print("Something went wrong in " + myself() )
-        log_error(e)
-        return None
+        Utils.log_error(e)
+        sys.exit(e)
 
     finally:
         browser.quit()
@@ -292,47 +279,53 @@ def _loginToAvanza(url, payload):
     
     opt = webdriver.FirefoxOptions()
     #opt.add_argument('-headless')
-    waitingTime = 60
-    log_path = os.path.abspath(os.getcwd()) + '/geckodriver/geckodriver.log'
-    browser = webdriver.Firefox(options=opt, service_log_path=log_path)
-    browser.implicitly_wait(waitingTime)
+    
+    browser = webdriver.Firefox(options=opt, service_log_path=constants.GECKO_LOG_PATH)
+    
+    # poll for elements for --  seconds max, before shutdown
+    browser.implicitly_wait(0)
+    wait = WebDriverWait(browser, 35)
 
     browser.get(url)
 
     headerLoginButtonXPATH = "/html/body/aza-app/div/div/aza-header/div/aza-header-login/button"
     
-    inputfieldXPATH = "/html/body/aza-app/aza-right-overlay-area/aside/ng-component/aza-login-overlay/ \
-    aza-right-overlay-template/main/div/aza-login/div/aza-toggle-switch-view/div/aza-bank-id/form/div[1]/div[2]/input"
+    inputfieldXPATH = "/html/body/aza-app/aza-right-overlay-area/aside/ng-component/aza-login-overlay/\
+        aza-right-overlay-template/main/div/aza-login/div/aza-toggle-switch-view/div/aza-bank-id/form/div[1]/div[2]/input"
 
-    loginButtonXPATH = "/html/body/aza-app/aza-right-overlay-area/aside/ng-component/aza-login-overlay/ \
-    aza-right-overlay-template/main/div/aza-login/div/aza-toggle-switch-view/div/aza-bank-id/form/div[1]/div[2]/button[1]"
-    time.sleep(2)
+    loginButtonXPATH = "/html/body/aza-app/aza-right-overlay-area/aside/ng-component/aza-login-overlay/\
+        aza-right-overlay-template/main/div/aza-login/div/aza-toggle-switch-view/div/aza-bank-id/form/div[1]/div[2]/button[1]"
+    
+    clickElement(browser, headerLoginButtonXPATH, 5)
+
+    # send login credentials
     try:
-        headerLogin =  WebDriverWait(browser, waitingTime).until(
-            EC.presence_of_element_located((By.XPATH, headerLoginButtonXPATH))
-        )
-
-        headerLogin.click()
-
-        username = WebDriverWait(browser, waitingTime).until(
+        username = WebDriverWait(browser, 5).until(
             EC.presence_of_element_located((By.XPATH, inputfieldXPATH))
         )
         
         username.send_keys(payload.get("pid"))
-        
-        login = WebDriverWait(browser, waitingTime).until(
-            EC.presence_of_element_located((By.XPATH, loginButtonXPATH))
-        )
-
-        login.click()
-
-        return browser
-
     except Exception as e:
-        print("Something went wrong in" + myself())
-        log_error(e)
+        Utils.log_error(e)
+        sys.exit(e)
+
+    clickElement(browser, loginButtonXPATH, 5)
+
+    # wait for bankID login
+    pendingAuthenticationXPATH ="/html/body/aza-app/aza-right-overlay-area/aside/ng-component/\
+        aza-login-overlay/aza-right-overlay-template/main/div/aza-login/div/aza-toggle-switch-view/div/aza-bank-id/form/div[1]"
+    try:
+        wait.until(
+            EC.invisibility_of_element_located((By.XPATH, pendingAuthenticationXPATH))
+        )
+    except TimeoutException as e:
+        print("AUTHENTICATION TOOK TOO LONG")
         browser.quit()
         sys.exit(e)
+
+    
+    return browser
+
 
 def scrape():
 
@@ -347,16 +340,10 @@ def scrape():
 
     html = _get_portfolio(browser)
 
+    # for reuse
     Utils.saveTxtFile(html, 'htmlAvanza') 
-
+    # html = Utils.readTxtFile('htmlAvanza')
+    
     dataframes = _parseHTML(html)
 
-    Excel.create(dataframes, 'portfolio', 1) 
-    
-    # portfolio = initiatePortfolio()
-    # portfolio.checkRules()
-    # portfolio.fundsBreakdown() 
-
-    # #portfolio.scrapeNasdaq()
-    # portfolio.saveStockInfoToExcel()
-    # portfolio.stocksBreakdown()
+    Excel.create(dataframes, 'portfolio', 1)

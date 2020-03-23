@@ -1,8 +1,15 @@
 import os
 
+# Directory Paths
 excelSaveLocation = os.path.abspath(os.getcwd()) + "/excel_files"
 txtSaveLocation = os.path.abspath(os.getcwd()) + "/text_files"
+pdfDownloadDir = os.path.abspath(os.getcwd()) + "/pdf"
 
+# GECKODRIVER LOG PATH
+GECKO_LOG_PATH = os.path.abspath(os.getcwd()) + '/geckodriver/geckodriver.log'
+
+
+# MISC
 translationDict = {
     'Typ': 'Type',
     'Alternativa': 'Alternative',

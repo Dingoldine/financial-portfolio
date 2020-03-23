@@ -1,6 +1,8 @@
 import pandas as pd
 import os, xlrd
 import constants
+import logging
+
 def printDf(df):
     """Given a dataframe object the functrion pretty prints the frame to the console."""
     if(hasattr(df, 'name')):
@@ -17,6 +19,7 @@ def saveTxtFile(text, filename):
 
 def readTxtFile(filename):
     """Given a filename returns the content as a String."""
+    
     with open(f'{constants.txtSaveLocation}/{filename}.txt','r') as f:
         html = f.read()
     return html
@@ -31,4 +34,11 @@ def readExcel(filename):
     except FileNotFoundError as e:
         return str(e)
     return wb
-  
+
+def log_error(e):
+    """
+    It is always a good idea to log errors. 
+    This function just prints them, but you can
+    make it do anything.
+    """
+    logging.exception("message")

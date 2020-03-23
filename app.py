@@ -4,11 +4,11 @@ from portfolio import Portfolio
 
 
 def run():
-    # avanza_scraper.scrape()
-
+    #avanza_scraper.scrape()
+    #nasdaq_omx_scraper.scrape()
     P = Portfolio()
-    #P.checkRules()
+    P.checkRules()
     P.fundsBreakdown()
-    #P.stocksBreakdown()
+    P.stocksBreakdown()
 
 run()
