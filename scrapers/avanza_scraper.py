@@ -11,6 +11,7 @@ from helpermodules import Excel, Utils
 from scrapers._scraping_functions import waitforload, clickElement 
 import constants
 
+
 import time
 import inspect
 import logging
@@ -291,10 +292,10 @@ def _loginToAvanza(url, payload):
     headerLoginButtonXPATH = "/html/body/aza-app/div/div/aza-header/div/aza-header-login/button"
     
     inputfieldXPATH = "/html/body/aza-app/aza-right-overlay-area/aside/ng-component/aza-login-overlay/\
-        aza-right-overlay-template/main/div/aza-login/div/aza-toggle-switch-view/div/aza-bank-id/form/div[1]/div[2]/input"
+        aza-right-overlay-template/main/div/aza-login/div/aza-toggle-switch-view/div/aza-bank-id/form/div[1]/div/input"
 
     loginButtonXPATH = "/html/body/aza-app/aza-right-overlay-area/aside/ng-component/aza-login-overlay/\
-        aza-right-overlay-template/main/div/aza-login/div/aza-toggle-switch-view/div/aza-bank-id/form/div[1]/div[2]/button[1]"
+        aza-right-overlay-template/main/div/aza-login/div/aza-toggle-switch-view/div/aza-bank-id/form/div[1]/div/button[1]"
     
     clickElement(browser, headerLoginButtonXPATH, 5)
 

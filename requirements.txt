@@ -10,3 +10,4 @@ python-dotenv
 html5lib
 requests
 fuzzywuzzy
+watchdog

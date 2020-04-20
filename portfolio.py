@@ -373,18 +373,10 @@ class Portfolio:
 
         # Calulate Alternative Fund Weights 
         alternative = df[df.Type == 'Alternative'].Weight.sum()
-
-        # Assert portfolio weight sums to 1
         
-        assert((em + glob + nord + eur + interests + alternative) == 1)
-
-        # print fund allocation
-        print('EMERGING MARKETS EQUITY:', em)
-        print('GLOBAL EQUITY:', glob)
-        print('SWEDEN(NORDICS) EQUITY:', nord)
-        print('EUROZONE EQUITY:', eur)
-        print('FIXED INCOME', interests)
-        print('ALTERNATIVE INVESTMENTS:', alternative)
+        s = em + glob + nord + eur + interests + alternative
+        # Assert portfolio weight sums to 1
+        assert(np.isclose(s, 1, rtol=1e-03, atol=1e-04))
 
         def rebalance(w, t):
             '''Rebalancing function that assumes portfolio value is fix, takes the current weight w and the target weight t 
@@ -436,14 +428,57 @@ class Portfolio:
 
         # make sure margin of error is between these two ranges
         assert(-500 < x + y+ z+ å + ä + ö < 500)
+
+
+        # print fund allocation
+        print('EMERGING MARKETS EQUITY:', em)
+        print('GLOBAL EQUITY:', glob)
+        print('SWEDEN(NORDICS) EQUITY:', nord)
+        print('EUROZONE EQUITY:', eur)
+        print('FIXED INCOME', interests)
+        print('ALTERNATIVE INVESTMENTS:', alternative)
         print('Adjust EM', x, 'KR')
         print('Adjust Glob', y , 'KR')
         print('Adjust Nord', z , 'KR')
         print('Adjust EUR', å, 'KR')
         print('Adjust Fixed income', ä, 'KR')
         print('Adjust Alternative', ö, 'KR')
-        Utils.printDf(df)
+
+        fundAllocationData = [
+            ["Emerging Markets Equity", em, self.target_developing_markets, f'Adjust by {x} Kr'],
+            ["Global Equity", glob, self.target_global, f'Adjust by {y} Kr'],
+            ["Sweden(Nordics) Equity", nord, self.target_nordic,  f'Adjust by {z} Kr'],
+            ["Eurozone Equity", eur, self.target_eu,  f'Adjust by {å} Kr'],
+            ["Fixed Income", interests, self.target_bonds,  f'Adjust by {ä} Kr'],
+            ["Alternative Investments", alternative, self.target_alternative,  f'Adjust by {ö} Kr']
+        ]
         
+        # Get ready for create excel
+        fundAllocationDf = pd.DataFrame(fundAllocationData, columns = ['Type', 'Weight', 'Target Weight', 'Actions']) 
+        fundAllocationDf.name = "Weight Breakdown"
+        fundAllocationDf.set_index(fundAllocationDf.columns.values[0], inplace=True) # Turn leftmost column to index
+        # Utils.printDf(df)
+        finalCountryAlloc.name = "By Country Breakdown"
+        finalCountryAlloc.set_index(finalCountryAlloc.columns.values[0], inplace=True) # Turn leftmost column to index
+
+        finalSectorAlloc.name = "By Sector Breakdown"
+        finalSectorAlloc.set_index(finalSectorAlloc.columns.values[0], inplace=True) # Turnmost left column to index
+        
+        finalInstrumentAlloc.name = "By Instrument Breakdown"
+        finalInstrumentAlloc.set_index(finalInstrumentAlloc.columns.values[0], inplace=True) # Turn leftmost column to index
+
+        df = df.reset_index().drop(["level_0","level_1"], axis=1)
+        leftMostCol = df.columns.values[0]
+        df.set_index(leftMostCol, inplace=True) # Turn this column to index
+        df.name = 'Funds'
+        dataframeList = [
+            df,
+            fundAllocationDf,
+            finalInstrumentAlloc,
+            finalCountryAlloc,
+            finalSectorAlloc
+        ]
+        Excel.create(dataframeList, 'Funds', 1, "Currency is in SEK")
         print("#################### END OF FUNDS #####################")
         
 
@@ -457,160 +492,7 @@ class Portfolio:
         assert (round(df['Weight'].sum(), 4) == 1)  # make sure the new sum is 1
         return df
 
-    def saveStockInfoToExcel(self):
-        """ Turns txt files containing stock info to an excel file """ 
-        for asset in self.stocks['Asset']:
-            print(f'opening {asset}_keyRatios')
-
-            try:
-                html = Utils.readTxtFile(f'{asset}_keyRatios')
-                
-                dataframeList = pd.read_html(html, header=None)
-
-            except Exception as e:
-                print('Something went wrong.. \n Message ', e)
-                continue
-
-            _ = dataframeList.pop() # no need for morningstar disclaimer table
-
-            for index, df in enumerate(dataframeList):
-                df = organizeDataframe(df)
-                
-                dataframeList[index] = df
-
-            # extracted them because I migh wanna do something with them? 
-            marginRatios = dataframeList[0]
-            marginRatios.name = 'Margins (in % of sales)'
-            
-            profitabilityRatios = dataframeList[1]
-            profitabilityRatios.name = 'Profitability'
-            # print(profitabilityRatios.loc['Net Margin'].values.tolist())
-            
-            # THIS TABLE HAS MULTIPLE TBODY TAGs,
-            ## need to split into sub-dataframes
-            growthRateRatios = dataframeList[2]
-
-            revenueGrowth = growthRateRatios.iloc[1:4]
-            revenueGrowth.name = 'Compound Revenue Growth'
-
-            operatingIncomeGrowth = growthRateRatios.iloc[5:8]
-            operatingIncomeGrowth.name = 'Compound OpMargin Growth'
-
-            EPSGrowth = growthRateRatios.iloc[9:]
-            EPSGrowth.name = ' EPS Growth'
-
-            cashFlowRatios = dataframeList[3]
-            cashFlowRatios.name = 'Cash Flow'
-
-            balaceSheetItems = dataframeList[4]
-            balaceSheetItems.name = 'Balance Sheet Items(in % Terms)'
-
-            financialHealthRatios = dataframeList[5]
-            financialHealthRatios.name = 'Liquidity-Financial Health'
-
-            efficiencyRatios = dataframeList[6]
-            efficiencyRatios.name = 'Efficiency'
-
-            print(f'opening {asset}_overview.txt')
-
-            html = Utils.readTxtFile(f'{asset}_overview')
-
-            soup  = BeautifulSoup(html, 'lxml')
-            companyProfile = soup.find("div", {"id": "CompanyProfile"})
-            # need to use somehow
-            currencyInfo = soup.find('p', {'class', 'disclaimer'})
-
-            print(currencyInfo.text.strip())
-            for child in companyProfile.find_all("div", {"class": "item"}):
-                if (child.find('h3')):
-                    strings = list([s for s in child.strings if len(s) > 1])
-                    key = strings[0].strip()
-                    value = strings[1].strip()
-                    self.stocks.loc[self.stocks['Asset'] == asset, key] = value
-                
-        
-            dataframeList = pd.read_html(html)
-            _ = dataframeList.pop() # no need for morningstar disclaimer table
-
-            # the first two are similar so we parse them first 
-            for index, df in enumerate(dataframeList):
-                # drop last row
-                df = df.iloc[:-1]
-                df = organizeDataframe(df)
-                
-                
-                dataframeList[index] = df
-                
-            # need to split into seperate DFs because html contained multiple <tbody>
-            financialSummary = dataframeList[0]
-            
-            incomeStatementSummary = financialSummary.iloc[1:6].astype(float)
-            latestYear = incomeStatementSummary.columns.values[-1]
-            latestEPS = incomeStatementSummary.loc['Basic EPS', latestYear]
-            self.stocks.loc[self.stocks['Asset'] == asset, f'EPS ({latestYear})'] = latestEPS
-            incomeStatementSummary.name = 'Income Statement Summary'
-            
-
-            balanceSheetSummary = financialSummary.iloc[7:13].astype(float)
-            balanceSheetSummary.name = 'Balance Sheet Summary'
-            
-            cashFlowSummary = financialSummary.iloc[14:].astype(float)
-            cashFlowSummary.name = 'Cash Flow Summary'
-
-            # rename column
-            ratios = dataframeList[1]
-            ratios=ratios.rename(columns = {1: 'Ratios'}) # rename
-            ratios.name = "Ratios"
-
-            dividends = dataframeList[2]
-            dividends.name = 'Dividends'
-
-            print(f'opening {asset}_financials.txt')
-            html = Utils.readTxtFile(f'{asset}_financials')
-            dataframeList = pd.read_html(html)
-        
-            entireIncomeStatement = dataframeList[0]
-            entireIncomeStatement = organizeDataframe(entireIncomeStatement)
-            entireIncomeStatement.name = 'Income Statement'
-
-            entireBalanceSheet = dataframeList[1]
-            entireBalanceSheet = organizeDataframe(entireBalanceSheet)
-            entireBalanceSheet.name = 'Balance Sheet'
-
-            entireCashFlowStatement = dataframeList[2]
-            entireCashFlowStatement = organizeDataframe(entireCashFlowStatement)
-            entireCashFlowStatement.name = 'Cash Flow Statement'
-            # print("INCOME STATEMENT")
-            # Utils.printDf(entireIncomeStatement)
-            # print("BALANCE SHEET")
-            # Utils.printDf(entireBalanceSheet)
-            # print("CASHFLOW STATEMENT")
-            # Utils.printDf(entireCashFlowStatement)
-
-            dataframes = [
-                marginRatios, 
-                profitabilityRatios, 
-                revenueGrowth,
-                operatingIncomeGrowth,
-                EPSGrowth, 
-                cashFlowRatios, 
-                balaceSheetItems, 
-                financialHealthRatios, 
-                efficiencyRatios,
-                entireIncomeStatement,
-                incomeStatementSummary,
-                entireBalanceSheet,
-                balanceSheetSummary,
-                entireCashFlowStatement,
-                cashFlowSummary,
-                ratios,
-                dividends
-                ]
-            # save to file
-            Excel.create(dataframes, asset, 1, currencyInfo.text.strip())
-        Utils.printDf(self.stocks)
-
-
+    
     def stocksBreakdown(self):
  
         wb =  Utils.readExcel('indname.xls')
@@ -674,11 +556,4 @@ class Portfolio:
 
         Utils.printDf(self.stocks)
     
-
-def organizeDataframe(df):
-    df=df.rename(columns = {'Unnamed: 0': 'Data'}) # rename
-    leftMostCol = df.columns.values[0]
-    df.set_index(leftMostCol, inplace=True) # Turn this column to index
-    df.index.name = None # Remove the name 
-    return df
 

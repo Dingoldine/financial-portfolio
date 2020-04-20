@@ -8,9 +8,177 @@ from selenium.common.exceptions import NoSuchElementException, TimeoutException,
 from bs4 import BeautifulSoup
 import pandas as pd
 import constants
-from helpermodules import Utils
+from helpermodules import Utils, Excel
 import time, os, shutil, sys
 from scrapers._scraping_functions import waitforload, clickElement
+
+
+def organizeDataframe(df):
+    df=df.rename(columns = {'Unnamed: 0': 'Data'}) # rename
+    leftMostCol = df.columns.values[0]
+    df.set_index(leftMostCol, inplace=True) # Turn this column to index
+    df.index.name = None # Remove the name 
+    return df
+
+
+
+def saveStockInfoToExcel():
+        """ Turns txt files containing stock info to an excel file """ 
+        df_map = pd.read_excel(f'{constants.excelSaveLocation}/portfolio.xlsx', sheet_name=None)
+        stocks = df_map.get("Stocks", None)
+
+        for asset in stocks['Asset']:
+            print(f'opening {asset}_keyRatios')
+
+            try:
+                html = Utils.readTxtFile(f'{asset}_keyRatios')
+                
+                dataframeList = pd.read_html(html, header=None)
+
+            except Exception as e:
+                print('Something went wrong.. \n Message ', e)
+                continue
+
+            _ = dataframeList.pop() # no need for morningstar disclaimer table
+
+            for index, df in enumerate(dataframeList):
+                df = organizeDataframe(df)
+                
+                dataframeList[index] = df
+
+            # extracted them because I migh wanna do something with them? 
+            marginRatios = dataframeList[0]
+            marginRatios.name = 'Margins (in % of sales)'
+            
+            profitabilityRatios = dataframeList[1]
+            profitabilityRatios.name = 'Profitability'
+            # print(profitabilityRatios.loc['Net Margin'].values.tolist())
+            
+            # THIS TABLE HAS MULTIPLE TBODY TAGs,
+            ## need to split into sub-dataframes
+            growthRateRatios = dataframeList[2]
+
+            revenueGrowth = growthRateRatios.iloc[1:4]
+            revenueGrowth.name = 'Compound Revenue Growth'
+
+            operatingIncomeGrowth = growthRateRatios.iloc[5:8]
+            operatingIncomeGrowth.name = 'Compound OpMargin Growth'
+
+            EPSGrowth = growthRateRatios.iloc[9:]
+            EPSGrowth.name = ' EPS Growth'
+
+            cashFlowRatios = dataframeList[3]
+            cashFlowRatios.name = 'Cash Flow'
+
+            balaceSheetItems = dataframeList[4]
+            balaceSheetItems.name = 'Balance Sheet Items(in % Terms)'
+
+            financialHealthRatios = dataframeList[5]
+            financialHealthRatios.name = 'Liquidity-Financial Health'
+
+            efficiencyRatios = dataframeList[6]
+            efficiencyRatios.name = 'Efficiency'
+
+            print(f'opening {asset}_overview.txt')
+
+            html = Utils.readTxtFile(f'{asset}_overview')
+
+            soup  = BeautifulSoup(html, 'lxml')
+            companyProfile = soup.find("div", {"id": "CompanyProfile"})
+            currencyInfo = soup.find('p', {'class', 'disclaimer'})
+
+            generalInfo = pd.DataFrame(columns=[""])
+            generalInfo.name = "Overview"
+            for child in companyProfile.find_all("div", {"class": "item"}):
+                if (child.find('h3')):
+                    strings = list([s for s in child.strings if len(s) > 1])
+                    key = strings[0].strip()
+                    value = strings[1].strip()
+                    generalInfo.loc[key] = [value]
+            
+
+            dataframeList = pd.read_html(html)
+            _ = dataframeList.pop() # no need for morningstar disclaimer table
+
+            # the first two are similar so we parse them first 
+            for index, df in enumerate(dataframeList):
+                # drop last row
+                df = df.iloc[:-1]
+                df = organizeDataframe(df)
+                
+                
+                dataframeList[index] = df
+                
+            # need to split into seperate DFs because html contained multiple <tbody>
+            financialSummary = dataframeList[0]
+            
+            incomeStatementSummary = financialSummary.iloc[1:6].astype(float)
+            latestYear = incomeStatementSummary.columns.values[-1]
+            latestEPS = incomeStatementSummary.loc['Basic EPS', latestYear]
+            stocks.loc[stocks['Asset'] == asset, f'EPS ({latestYear})'] = latestEPS
+            incomeStatementSummary.name = 'Income Statement Summary'
+            
+
+            balanceSheetSummary = financialSummary.iloc[7:13].astype(float)
+            balanceSheetSummary.name = 'Balance Sheet Summary'
+            
+            cashFlowSummary = financialSummary.iloc[14:].astype(float)
+            cashFlowSummary.name = 'Cash Flow Summary'
+
+            # rename column
+            ratios = dataframeList[1]
+            ratios=ratios.rename(columns = {1: 'Ratios'}) # rename
+            ratios.name = "Ratios"
+
+            dividends = dataframeList[2]
+            dividends.name = 'Dividends'
+
+            print(f'opening {asset}_financials.txt')
+            html = Utils.readTxtFile(f'{asset}_financials')
+            dataframeList = pd.read_html(html)
+        
+            entireIncomeStatement = dataframeList[0]
+            entireIncomeStatement = organizeDataframe(entireIncomeStatement)
+            entireIncomeStatement.name = 'Income Statement'
+
+            entireBalanceSheet = dataframeList[1]
+            entireBalanceSheet = organizeDataframe(entireBalanceSheet)
+            entireBalanceSheet.name = 'Balance Sheet'
+
+            entireCashFlowStatement = dataframeList[2]
+            entireCashFlowStatement = organizeDataframe(entireCashFlowStatement)
+            entireCashFlowStatement.name = 'Cash Flow Statement'
+            # print("INCOME STATEMENT")
+            # Utils.printDf(entireIncomeStatement)
+            # print("BALANCE SHEET")
+            # Utils.printDf(entireBalanceSheet)
+            # print("CASHFLOW STATEMENT")
+            # Utils.printDf(entireCashFlowStatement)
+
+            dataframes = [
+                generalInfo,
+                marginRatios, 
+                profitabilityRatios, 
+                revenueGrowth,
+                operatingIncomeGrowth,
+                EPSGrowth, 
+                cashFlowRatios, 
+                balaceSheetItems, 
+                financialHealthRatios, 
+                efficiencyRatios,
+                entireIncomeStatement,
+                incomeStatementSummary,
+                entireBalanceSheet,
+                balanceSheetSummary,
+                entireCashFlowStatement,
+                cashFlowSummary,
+                ratios,
+                dividends
+                ]
+            # save to file
+            Excel.create(dataframes, asset, 1, currencyInfo.text.strip())
+
+
 
 def scrape():
     df_map = pd.read_excel(f'{constants.excelSaveLocation}/portfolio.xlsx', sheet_name=None)
@@ -186,15 +354,7 @@ def scrape():
 
             #click instantly downloads because of browser preferences
             clickElement(browser, factsheetLinkXPATH, 5)
-
-            # wait for download to complete
-            # can optimize line below with event and directory watcher
-            time.sleep(20)
-
-            # rename the latest file
-            newfilename = f'{asset}.pdf'
-            filename = max([constants.pdfDownloadDir + "/" + f for f in os.listdir(constants.pdfDownloadDir)], key=os.path.getctime)
-            shutil.move(os.path.join(constants.pdfDownloadDir, filename), os.path.join(constants.pdfDownloadDir, newfilename))
+        
     except Exception as e:
         Utils.log_error(e)
         browser.quit()

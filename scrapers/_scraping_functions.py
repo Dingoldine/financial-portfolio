@@ -8,6 +8,7 @@ from selenium.webdriver.common.by import By
 def clickElement(browser, XPATH, maxWaitTime):
     wait = WebDriverWait(browser, maxWaitTime)
     error = ""
+    moveToTarget = True
     retries = 0
     while retries < 5:
         print('Clicking Element:', XPATH)
@@ -16,14 +17,17 @@ def clickElement(browser, XPATH, maxWaitTime):
             button = wait.until(
                 EC.element_to_be_clickable((By.XPATH, XPATH))
             )
-            coordinates = button.location_once_scrolled_into_view
-            browser.execute_script(f'window.scrollTo({coordinates["x"]}, {coordinates["y"]});') #scroll to element
-            ActionChains(browser).move_to_element(button).perform() #hover ove
+            if (moveToTarget):
+                coordinates = button.location_once_scrolled_into_view
+                browser.execute_script(f'window.scrollTo({coordinates["x"]}, {coordinates["y"]});') #scroll to element
+                ActionChains(browser).move_to_element(button).perform() #hover over
             button.click()
             waitforload(browser, maxWaitTime)
             return
         except (TimeoutException, NoSuchElementException, ElementClickInterceptedException, \
             UnexpectedAlertPresentException, MoveTargetOutOfBoundsException) as e:
+            if (isinstance(e, MoveTargetOutOfBoundsException)):
+                moveToTarget = False
             browser.refresh()
             waitforload(browser, maxWaitTime)
             retries += 1
