@@ -139,21 +139,18 @@ def saveStockInfoToExcel():
         
             entireIncomeStatement = dataframeList[0]
             entireIncomeStatement = organizeDataframe(entireIncomeStatement)
+            entireIncomeStatement = entireIncomeStatement.apply(pd.to_numeric, errors='coerce') 
             entireIncomeStatement.name = 'Income Statement'
 
             entireBalanceSheet = dataframeList[1]
             entireBalanceSheet = organizeDataframe(entireBalanceSheet)
+            entireBalanceSheet = entireBalanceSheet.apply(pd.to_numeric, errors='coerce') 
             entireBalanceSheet.name = 'Balance Sheet'
 
             entireCashFlowStatement = dataframeList[2]
             entireCashFlowStatement = organizeDataframe(entireCashFlowStatement)
+            entireCashFlowStatement = entireCashFlowStatement.apply(pd.to_numeric, errors='coerce') 
             entireCashFlowStatement.name = 'Cash Flow Statement'
-            # print("INCOME STATEMENT")
-            # Utils.printDf(entireIncomeStatement)
-            # print("BALANCE SHEET")
-            # Utils.printDf(entireBalanceSheet)
-            # print("CASHFLOW STATEMENT")
-            # Utils.printDf(entireCashFlowStatement)
 
             dataframes = [
                 generalInfo,

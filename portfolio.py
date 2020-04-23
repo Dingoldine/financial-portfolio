@@ -494,7 +494,7 @@ class Portfolio:
 
     
     def stocksBreakdown(self):
- 
+        print("#################### STOCKS #####################")
         wb =  Utils.readExcel('indname.xls')
         companyExcelList = wb.sheet_by_name('Industry sorted (Global)')
 
@@ -541,19 +541,53 @@ class Portfolio:
                 self.stocks.loc[self.stocks['Asset'] == asset, 'Sub Region'] = d[3]
                 self.stocks.loc[self.stocks['Asset'] == asset, 'Industry Group (Damodaran)'] = d[4]
             
-            financialsWB = Utils.readExcel(f'{asset}.xlsx')
-            if(financialsWB == FileNotFoundError):
-                print(financialsWB)
-            # do calculations TO BE DONE
-        moneyLosingStocks = self.stocks[(self.stocks['EPS (2019)'] < 0) | (self.stocks['EPS (2018)'] < 0)]
-        moneyLosingStocks.Weight.sum()
+            try:
+                financialsWB = Utils.readExcel(f'{asset}.xlsx')
 
-        if moneyLosingStocks.Weight.sum() > self.max_growth_stocks: # growth stocks are money losing
-            print('TO MUCH MONEY IN MONEY LOSING STOCKS')
+                # get sheets
+                overviewSheet = financialsWB.sheet_by_name('Overview')
+                incomestatementSheet = financialsWB.sheet_by_name('Income Statement')
+                
+                for rowidx in range(overviewSheet.nrows):
+                    row = overviewSheet.row_values(rowidx)
+                    if ((row[0] != "") and not ('except "Basic EPS"' in row[0])): # disregard currency row and empty rows
+                        self.stocks.loc[self.stocks['Asset'] == asset, row[0]] = row[1]
+                    # for colidx, cell in enumerate(row):
+                    #     print(cell.value)
+                    #     # switch (cell.value) {
+                    #     # if cell.value == "particularString" :
+                    #     #     print(overviewSheet.name)
+                    #     #     print(colidx)
+                    #     #     print(rowidx)
+
+                for rowidx in range(incomestatementSheet.nrows):
+                    row_values = incomestatementSheet.row_values(rowidx)
+                    
+                    if row_values[0] == "Basic": #basic eps
+                        latestEps = row_values[incomestatementSheet.ncols - 1] # latest year
+                        latestYear = incomestatementSheet.cell_value(0, incomestatementSheet.ncols - 1)
+                        self.stocks.loc[self.stocks['Asset'] == asset, f'EPS ({latestYear})'] = latestEps
+
+
+            except FileNotFoundError:
+                pass
+
+        # Utils.printDf(self.stocks)
+        moneyLosingStocks = self.stocks[(self.stocks['EPS (2019)'] < 0) | (self.stocks['EPS (2018)'] < 0)]
+        moneyLosingWeight = moneyLosingStocks.Weight.sum()
+
+        if moneyLosingWeight > self.max_growth_stocks: # growth stocks are money losing
+            difference = moneyLosingWeight - self.max_growth_stocks
+            print(self.max_growth_stocks, moneyLosingWeight, difference)
+            amountShouldSell = self.stocks['Market Value'].sum() * difference
+            print(f'Sell {amountShouldSell} in any/or a mixture of {moneyLosingStocks.Asset.values} to be compliant with portfolio rules')
             # CALCULATE HOW MUCH TO SELL IN TERMS OF SEK IN ANY OF OR A MIX OF THE MONEY LOSING COMPANIES
 
 
 
         Utils.printDf(self.stocks)
-    
-
+        self.stocks.name = "Stocks"
+        leftMostCol = self.stocks.columns.values[0]
+        self.stocks.set_index(leftMostCol, inplace=True) # Turn this column to index
+        Excel.create([self.stocks], "Stocks", 1)
+        print("#################### END OF STOCKS #####################")

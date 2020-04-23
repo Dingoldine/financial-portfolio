@@ -31,8 +31,9 @@ def readExcel(filename):
     try:
     # To open Workbook 
         wb = xlrd.open_workbook(f'{constants.excelSaveLocation}/{filename}') 
-    except FileNotFoundError as e:
-        return str(e)
+    except FileNotFoundError:
+        raise
+    
     return wb
 
 def log_error(e):
