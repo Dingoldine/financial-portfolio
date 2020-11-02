@@ -216,13 +216,16 @@ def _buildDataframe(headers, rows, caption):
 def _get_portfolio(browser):
     """Saves a txt file of all fund detail pages and returns portfolio view html """
 
-    portfolioViewLinkXPATH = "/html/body/aza-app/div/main/div/aza-feed-latest/aza-base-page/div/ \
-    aza-pull-to-refresh/div/div[2]/aza-page-container/div/div[1]/ \
-    aza-feed-development/aza-card/section[5]/a"
+    portfolioViewLinkXPATH = "/html/body/aza-app/div/main/div/aza-feed-latest/aza-base-page/div/aza-pull-to-refresh/div/div[2]/ \
+        aza-page-container/div/div[1]/aza-feed-development/aza-card/aza-loading-state-wrapper/section[3]/a"
+
+    oldPortfolioViewXPATH = "/html/body/aza-app/div/main/div/aza-my-economy-positions/aza-page-container/aza-loading-state-wrapper/aza-card/div[1]/div/a"
 
     try:
         clickElement(browser, portfolioViewLinkXPATH, 5)
         
+        clickElement(browser, oldPortfolioViewXPATH, 5)
+
         # wait for table to load
         fundTableXPATH = "//table[contains(@class, 'groupInstTypeTable')][2]"
         _ = WebDriverWait(browser, 10).until(
@@ -261,7 +264,7 @@ def _get_portfolio(browser):
         #go back
         browser.execute_script(f'window.history.go(-{len(fundDictionary)})')
         
-        #wait for javascipt to load then scrape
+        #wait for javascript to load then scrape
         time.sleep(5)
         soup  = BeautifulSoup(browser.page_source, 'lxml')
     
@@ -289,6 +292,8 @@ def _loginToAvanza(url, payload):
 
     browser.get(url)
 
+    acceptCookiesButtonXPATH = "/html/body/aza-app/div/aza-cookie-message/div/div[1]/div/button"
+
     headerLoginButtonXPATH = "/html/body/aza-app/div/div/aza-header/div/aza-header-login/button"
     
     inputfieldXPATH = "/html/body/aza-app/aza-right-overlay-area/aside/ng-component/aza-login-overlay/\
@@ -297,6 +302,8 @@ def _loginToAvanza(url, payload):
     loginButtonXPATH = "/html/body/aza-app/aza-right-overlay-area/aside/ng-component/aza-login-overlay/\
         aza-right-overlay-template/main/div/aza-login/div/aza-toggle-switch-view/div/aza-bank-id/form/div[1]/div/button[1]"
     
+    clickElement(browser, acceptCookiesButtonXPATH, 5)
+
     clickElement(browser, headerLoginButtonXPATH, 5)
 
     # send login credentials

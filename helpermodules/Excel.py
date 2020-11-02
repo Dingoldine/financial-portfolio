@@ -1,3 +1,4 @@
+# cSpell: disable
 import pandas as pd
 import pandas.io.formats.excel
 import os

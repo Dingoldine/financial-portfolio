@@ -37,7 +37,8 @@ def on_moved(event):
         global currentAsset
         oldfilename = os.path.basename(event.dest_path)
         newfilename = f'{currentAsset}.pdf'
-        #rename 
+        #rename
+        print("Renaming {} to {}".format(oldfilename, newfilename))
         shutil.move(os.path.join(constants.pdfDownloadDir, oldfilename), os.path.join(constants.pdfDownloadDir, newfilename))
 
 my_event_handler.on_created = on_created

@@ -16,6 +16,7 @@ translationDict = {
     'Aktiefond': 'Equity',
     'Räntefond': 'Fixed Income',
     'Kategori': 'Category',
+    'Branschfond, Ny teknik': 'Sectorfund, Technology',
     'Hedgefond, Multi-strategi': 'Hedgefund, Multi-strategy',
     'Tillväxtmarknader': 'Emerging Markets',
     'Global, Mix bolag': 'Global Mix',

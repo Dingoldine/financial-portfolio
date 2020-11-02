@@ -84,15 +84,20 @@ class Portfolio:
         self.certificates = df_map.get("Certificates", None)
         self.summary = df_map.get("Potfolio Summary", None)
         
-        self.stocks_value = self.stocks['Market Value'].sum()
+        if self.certificates is not None:
+            self.cert_value = self.certificates['Market Value'].sum()
+            self.certificates['Weight'] = self.certificates['Market Value'] /  self.cert_value
+        else:
+            self.cert_value = 0
+        self.stocks_value = self.stocks['Market Value'].sum()   
         self.funds_value = self.funds['Market Value'].sum()
-        self.cert_value = self.certificates['Market Value'].sum()
+        
 
         self.portfolio_value = self.stocks_value + self.funds_value + self.cert_value
 
         self.stocks['Weight'] = self.stocks['Market Value'] /  self.stocks_value
         self.funds['Weight'] = self.funds['Market Value'] /  self.funds_value
-        self.certificates['Weight'] = self.certificates['Market Value'] /  self.cert_value
+        
 
     def checkRules(self):
 
@@ -170,12 +175,12 @@ class Portfolio:
                 #countries = list(set(countries))
                 for i in range(len(countries)):
                     percentageString = percentages[i].text.strip().replace('%', '').replace(',', '.')
-                    percentegeFloat = round(float(percentageString)/100, 4)
+                    percentageFloat = round(float(percentageString)/100, 4)
                     country = countries[i].text.strip()
                     countryInEnglish = translationDict.get(country)
                     if (countryInEnglish == None):
                         countryInEnglish = country
-                    countryDict[countryInEnglish] = percentegeFloat
+                    countryDict[countryInEnglish] = percentageFloat
                 countryDF  = pd.DataFrame(list(countryDict.items()))
             elif headingText == 'Branscher':
                 ## sectors 
@@ -187,8 +192,8 @@ class Portfolio:
                 percentages = sectorAllocations.find_all('span', {'class': 'percent'})
                 for i in range(len(sectors)):
                     percentageString = percentages[i].text.strip().replace('%', '').replace(',', '.')
-                    percentegeFloat = round(float(percentageString)/100, 4)
-                    sectorDict[sectors[i].text.strip()] = percentegeFloat
+                    percentageFloat = round(float(percentageString)/100, 4)
+                    sectorDict[sectors[i].text.strip()] = percentageFloat
                 sectorDF = pd.DataFrame(list(sectorDict.items()))
             elif headingText == 'Största innehav':
                 ## individual stocks
@@ -205,8 +210,8 @@ class Portfolio:
                 # print(p)
                 for i in range(len(stocks)):
                     percentageString = percentages[i].text.strip().replace('%', '').replace(',', '.').replace('−', '-')
-                    percentegeFloat = round(float(percentageString)/100, 4)
-                    stockDict[stocks[i].text.strip()] = percentegeFloat
+                    percentageFloat = round(float(percentageString)/100, 4)
+                    stockDict[stocks[i].text.strip()] = percentageFloat
                 stocksDF = pd.DataFrame(list(stockDict.items()))
 
             else:
@@ -355,13 +360,16 @@ class Portfolio:
                 return 'Europe'
             elif (('Sweden' in C)):
                 return 'Sweden'
+            # the below 2 are questionable
             elif('Hedgefund' in C):
                 return '-'
+            elif('Sectorfund' in C):
+                 return 'Global'
             else: 
                 return '-'
 
         df['Region'] = df.apply(conditions, axis=1)
-        
+ 
         # Calculate Equity Weights
         em = df[(df.Region == 'Emerging Markets') & (df.Type == 'Equity')].Weight.sum()
         glob = df[(df.Region == 'Global') & (df.Type == 'Equity')].Weight.sum()
@@ -374,8 +382,10 @@ class Portfolio:
         # Calulate Alternative Fund Weights 
         alternative = df[df.Type == 'Alternative'].Weight.sum()
         
+
         s = em + glob + nord + eur + interests + alternative
         # Assert portfolio weight sums to 1
+        
         assert(np.isclose(s, 1, rtol=1e-03, atol=1e-04))
 
         def rebalance(w, t):
@@ -427,7 +437,7 @@ class Portfolio:
         ö = rebalance(alternative, self.target_alternative)
 
         # make sure margin of error is between these two ranges
-        assert(-500 < x + y+ z+ å + ä + ö < 500)
+        assert(-500 < x + y + z + å + ä + ö < 500)
 
 
         # print fund allocation
@@ -541,6 +551,7 @@ class Portfolio:
                 self.stocks.loc[self.stocks['Asset'] == asset, 'Sub Region'] = d[3]
                 self.stocks.loc[self.stocks['Asset'] == asset, 'Industry Group (Damodaran)'] = d[4]
             
+            # get stock financials
             try:
                 financialsWB = Utils.readExcel(f'{asset}.xlsx')
 
@@ -552,13 +563,6 @@ class Portfolio:
                     row = overviewSheet.row_values(rowidx)
                     if ((row[0] != "") and not ('except "Basic EPS"' in row[0])): # disregard currency row and empty rows
                         self.stocks.loc[self.stocks['Asset'] == asset, row[0]] = row[1]
-                    # for colidx, cell in enumerate(row):
-                    #     print(cell.value)
-                    #     # switch (cell.value) {
-                    #     # if cell.value == "particularString" :
-                    #     #     print(overviewSheet.name)
-                    #     #     print(colidx)
-                    #     #     print(rowidx)
 
                 for rowidx in range(incomestatementSheet.nrows):
                     row_values = incomestatementSheet.row_values(rowidx)
@@ -567,18 +571,42 @@ class Portfolio:
                         latestEps = row_values[incomestatementSheet.ncols - 1] # latest year
                         latestYear = incomestatementSheet.cell_value(0, incomestatementSheet.ncols - 1)
                         self.stocks.loc[self.stocks['Asset'] == asset, f'EPS ({latestYear})'] = latestEps
-
-
             except FileNotFoundError:
                 pass
+                
+            # industry betas
+            indDamodaran = self.stocks.loc[self.stocks['Asset'] == asset, 'Industry Group (Damodaran)'].values[0]
+            print(indDamodaran)
+            try:
+                betasGlobalWB = Utils.readExcel('betasGlobal.xls')
+                betasUSWB = Utils.readExcel('betasUS.xlsx')
 
-        # Utils.printDf(self.stocks)
-        moneyLosingStocks = self.stocks[(self.stocks['EPS (2019)'] < 0) | (self.stocks['EPS (2018)'] < 0)]
+                beta_global_averages = betasGlobalWB.sheet_by_name('Industry Averages')
+                beta_us_averages = betasUSWB.sheet_by_name('Industry Averages')
+
+                # global 
+                for rowidx in range(beta_global_averages.nrows):
+                    row_values = beta_global_averages.row_values(rowidx)
+                    if row_values[0] == indDamodaran:
+                        self.stocks.loc[self.stocks['Asset'] == asset, 'Unlevered beta (Global)'] = row_values[5]
+                
+                # us
+                for rowidx in range(beta_us_averages.nrows):
+                    row_values = beta_us_averages.row_values(rowidx)
+                    if row_values[0] == indDamodaran:
+                        self.stocks.loc[self.stocks['Asset'] == asset, 'Unlevered beta (US)'] = row_values[5]
+            
+            except FileNotFoundError:
+                raise
+     
+        theFilter = [col for col in self.stocks if col.startswith('EPS')]
+        moneyLosingStocks = self.stocks.loc[(self.stocks[theFilter] < 0).any(axis=1), :]
+        Utils.printDf(moneyLosingStocks)
         moneyLosingWeight = moneyLosingStocks.Weight.sum()
 
         if moneyLosingWeight > self.max_growth_stocks: # growth stocks are money losing
             difference = moneyLosingWeight - self.max_growth_stocks
-            print(self.max_growth_stocks, moneyLosingWeight, difference)
+            # print(self.max_growth_stocks, moneyLosingWeight, difference)
             amountShouldSell = self.stocks['Market Value'].sum() * difference
             print(f'Sell {amountShouldSell} in any/or a mixture of {moneyLosingStocks.Asset.values} to be compliant with portfolio rules')
             # CALCULATE HOW MUCH TO SELL IN TERMS OF SEK IN ANY OF OR A MIX OF THE MONEY LOSING COMPANIES

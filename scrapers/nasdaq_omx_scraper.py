@@ -46,7 +46,7 @@ def saveStockInfoToExcel():
                 
                 dataframeList[index] = df
 
-            # extracted them because I migh wanna do something with them? 
+            # extracted them because I might wanna do something with them? 
             marginRatios = dataframeList[0]
             marginRatios.name = 'Margins (in % of sales)'
             
@@ -54,7 +54,7 @@ def saveStockInfoToExcel():
             profitabilityRatios.name = 'Profitability'
             # print(profitabilityRatios.loc['Net Margin'].values.tolist())
             
-            # THIS TABLE HAS MULTIPLE TBODY TAGs,
+            # THIS TABLE HAS MULTIPLE T-BODY TAGs,
             ## need to split into sub-dataframes
             growthRateRatios = dataframeList[2]
 
@@ -109,7 +109,7 @@ def saveStockInfoToExcel():
                 
                 dataframeList[index] = df
                 
-            # need to split into seperate DFs because html contained multiple <tbody>
+            # need to split into separate DFs because html contained multiple <tbody>
             financialSummary = dataframeList[0]
             
             incomeStatementSummary = financialSummary.iloc[1:6].astype(float)
@@ -190,7 +190,7 @@ def scrape():
     fp.set_preference("browser.download.manager.showWhenStarting",False)
     fp.set_preference("browser.download.dir", constants.pdfDownloadDir)
     fp.set_preference("pdfjs.disabled", True)
-    # Use this to disable Acrobat plugin for previewing PDFs in Firefox (if you have Adobe reader installed on your computer)
+    # Use this to disable Acrobat plugin for previewing PDF:s in Firefox (if you have Adobe reader installed on your computer)
     fp.set_preference("plugin.scan.Acrobat", "99.0")
     fp.set_preference("plugin.scan.plid.all", False)
     # 0 desktop, 1 Default Download, 2 User defined
@@ -210,9 +210,9 @@ def scrape():
         retries = 0
         while retries < 5:  
             try:
-                print('Waiting for Iframe and Iframe Tables:')
+                print('Waiting for iFrame and iFrame Tables:')
                 print('Attempt Number:', retries + 1)
-                # wait for iframe to be availible
+                # wait for iFrame to be available
                 wait.until(
                     EC.frame_to_be_available_and_switch_to_it((By.XPATH, morningstarFrameXPATH))
                 )
@@ -281,7 +281,7 @@ def scrape():
                     #add to dict
                     foundAssetsDict[str(asset.get_attribute("innerHTML")).strip()] = asset.get_attribute("href")
                 except NoSuchElementException:
-                    print("couldnt find: ", assetName, "in First North")
+                    print("couldn't find: ", assetName, "in First North")
 
         # EXTRACT RATIOS
         for asset, href in foundAssetsDict.items(): 
@@ -293,7 +293,7 @@ def scrape():
             
             clickElement(browser, keyRatiosXPATH, 5)
 
-            # Switch to iframe containing morningstar data
+            # Switch to iFrame containing morningstar data
             switchToMorningstarFrame()
             
 
