@@ -135,3 +135,4 @@ excel_files/
 .vscode/
 geckodriver/
 *.~lock*
+config.ini

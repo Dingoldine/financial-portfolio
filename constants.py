@@ -13,6 +13,7 @@ GECKO_LOG_PATH = os.path.abspath(os.getcwd()) + '/geckodriver/geckodriver.log'
 translationDict = {
     'Typ': 'Type',
     'Alternativa': 'Alternative',
+    'Blandfond': 'Mix Equity & Fixed Income',
     'Aktiefond': 'Equity',
     'Räntefond': 'Fixed Income',
     'Kategori': 'Category',

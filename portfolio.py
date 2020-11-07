@@ -28,6 +28,7 @@ import os
 import sys
 import re
 
+from database import Database
 
 # for complex string matching
 from fuzzywuzzy import fuzz, process
@@ -237,6 +238,7 @@ class Portfolio:
                 value = row._2
                 df.loc[df['Asset'] == instrument, key] = value
             
+
             instrumentAlloc = data.get('instruments')
             sectorAlloc = data.get('sectors')
             countryAlloc = data.get('countries')
@@ -254,6 +256,12 @@ class Portfolio:
                 countryAlloc[1] = countryAlloc[1].multiply(weight)
                 finalCountryAlloc = pd.merge(countryAlloc, finalCountryAlloc, how='outer', left_on=0, right_on=0, suffixes=('_left', '_right'))
 
+        # convert dtypes
+        df['Index Fund'] = df['Index Fund'].map({'Yes': 1, 'No': 0}).astype(bool, errors='raise')
+        df['UCITS'] = df['UCITS'].map({'Yes': 1, 'No': 0}).astype(bool, errors='raise')
+        df['Start date'] = df['Start date'].apply(pd.to_datetime, errors='raise')
+        df['Owners at Avanza'] = df['Owners at Avanza'].str.replace('st', '').str.replace('\s', '', regex=True).apply(pd.to_numeric, errors='raise')
+        df['AUM'] = df['AUM'].str.replace('\s|MSEK', '', regex=True).apply(pd.to_numeric, errors='raise') * np.power(10, 6)
         # total exposure
         finalSectorAlloc = self.modifyAllocationDF(finalSectorAlloc)
         Utils.printDf(finalSectorAlloc.sort_values('Weight', ascending=False))
@@ -377,15 +385,16 @@ class Portfolio:
         eur = df[(df.Region == 'Europe') & (df.Type == 'Equity')].Weight.sum()
 
         # Calculate Fixed Income Weights
-        interests = df[df.Type == 'Fixed Income'].Weight.sum()
-
+        interests = df[df.Type.str.contains("Fixed Income")].Weight.sum()
+        print(df.Weight.sum())
         # Calulate Alternative Fund Weights 
         alternative = df[df.Type == 'Alternative'].Weight.sum()
         
 
         s = em + glob + nord + eur + interests + alternative
         # Assert portfolio weight sums to 1
-        
+        Utils.printDf(df)
+        print(s)
         assert(np.isclose(s, 1, rtol=1e-03, atol=1e-04))
 
         def rebalance(w, t):
@@ -488,6 +497,9 @@ class Portfolio:
             finalCountryAlloc,
             finalSectorAlloc
         ]
+
+        self.funds = df
+        self.funds.name = "Funds"
         Excel.create(dataframeList, 'Funds', 1, "Currency is in SEK")
         print("#################### END OF FUNDS #####################")
         
@@ -610,12 +622,19 @@ class Portfolio:
             amountShouldSell = self.stocks['Market Value'].sum() * difference
             print(f'Sell {amountShouldSell} in any/or a mixture of {moneyLosingStocks.Asset.values} to be compliant with portfolio rules')
             # CALCULATE HOW MUCH TO SELL IN TERMS OF SEK IN ANY OF OR A MIX OF THE MONEY LOSING COMPANIES
-
-
-
-        Utils.printDf(self.stocks)
+        
+        # convert employees col to int, but IT DOESNT WOR BECAUSE NAN VALUES EXIST IN FRAME, AND THUS IN PANDAS IT WILL BE FLOAT
+        self.stocks["Employees"] = self.stocks["Employees"].apply(pd.to_numeric, errors="coerce")
+    
         self.stocks.name = "Stocks"
         leftMostCol = self.stocks.columns.values[0]
         self.stocks.set_index(leftMostCol, inplace=True) # Turn this column to index
         Excel.create([self.stocks], "Stocks", 1)
         print("#################### END OF STOCKS #####################")
+
+
+    def updateDatabase(self):
+        db = Database()
+        db.connect()
+        db.createTableFromDF(self.stocks, 'stocks')
+        db.createTableFromDF(self.funds, 'funds')

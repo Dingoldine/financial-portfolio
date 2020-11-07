@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+</head>
+<body>
+    
+<table border = 1>
+    {% for stock in data %}
+    <tr>
+        {% for col in stock %}
+        <td> {{col}}</td>
+        {% endfor %}
+    </tr>
+    {% endfor %}
+</table>
+  </body>
+</html>
