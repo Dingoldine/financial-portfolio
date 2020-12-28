@@ -1,0 +1,15 @@
+version: "3.8"
+services:
+  frontend:
+    build: ./frontend
+    ports:
+      - 8080:80
+    depends_on:
+      - backend
+  postgres:
+    image: docker.io/postgres:13.1
+    env_file: ./env/postgres.env
+  backend:
+    build: ./backend
+    depends_on:
+      - postgres

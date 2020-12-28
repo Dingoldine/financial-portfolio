@@ -4,14 +4,14 @@ import requests
 from requests.exceptions import HTTPError
 
 # financial apis 
-from pandas_datareader.iex import IEX
-from alpha_vantage.timeseries import TimeSeries
-from alpha_vantage.sectorperformance import SectorPerformances
+# from pandas_datareader.iex import IEX
+# from alpha_vantage.timeseries import TimeSeries
+# from alpha_vantage.sectorperformance import SectorPerformances
 
 # from __future__ import print_function
-import intrinio_sdk
-from intrinio_sdk.rest import ApiException
-from pprint import pprint
+# import intrinio_sdk
+# from intrinio_sdk.rest import ApiException
+# from pprint import pprint
 
 import constants
 
@@ -33,18 +33,18 @@ from database import Database
 # for complex string matching
 from fuzzywuzzy import fuzz, process
 
-try:  
-   alphaVantageKey = os.environ.get("ALPHA_VANTAGE_APIKEY")
-   iexCloudKey = os.environ.get("IEX_CLOUD_APIKEY")
-   intrinioKey = os.environ.get("INTRINIO_APIKEY")
-except KeyError: 
-   print("Please set the environment variables")
-   sys.exit(1)
+# try:  
+#    alphaVantageKey = os.environ.get("ALPHA_VANTAGE_APIKEY")
+#    iexCloudKey = os.environ.get("IEX_CLOUD_APIKEY")
+#    intrinioKey = os.environ.get("INTRINIO_APIKEY")
+# except KeyError: 
+#    print("Please set the environment variables")
+#    sys.exit(1)
    
-# setup api 
-intrinio_sdk.ApiClient().configuration.api_key['api_key'] = intrinioKey
-sp = SectorPerformances(key=alphaVantageKey, output_format='pandas')
-ts = TimeSeries(key=alphaVantageKey,output_format='pandas', indexing_type='integer')
+# # setup api 
+# intrinio_sdk.ApiClient().configuration.api_key['api_key'] = intrinioKey
+# sp = SectorPerformances(key=alphaVantageKey, output_format='pandas')
+# ts = TimeSeries(key=alphaVantageKey,output_format='pandas', indexing_type='integer')
 
 class Portfolio:
 

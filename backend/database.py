@@ -1,14 +1,13 @@
-import configparser, psycopg2
-from helpermodules import Utils
-from io import StringIO
-import pandas as pd
+import configparser, psycopg2, sys
+#from io import StringIO
+#import pandas as pd
 from sqlalchemy import pool, create_engine, Integer, String, Numeric, Float, Boolean, DateTime, BigInteger
-import numpy as np
+#import numpy as np
 class Database:
 
     def __init__(self):
         Config = configparser.ConfigParser()
-        Config.read('config.ini')
+        Config.read('./config.ini')
         self.dbConfig = dict(Config.items("DATABASE"))
 
     def connect(self):
@@ -34,7 +33,7 @@ class Database:
 
         except (Exception, psycopg2.Error) as error :
             print ("Error while connecting to PostgreSQL", error)
-
+            sys.exit()
 
     def create(self):
         # problem inserting numeric missing data values as with the stringIO stream we can not insert NULL,
