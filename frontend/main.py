@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, Response, HTTPException
 import requests
 from fastapi.responses import HTMLResponse, FileResponse
 #import scrapers.avanza_scraper as avanza_scraper
@@ -23,14 +23,21 @@ async def root(request: Request):
 async def getPortfolio(request: Request):
     res = requests.get('http://backend/getPortfolio')
     if res.status_code == 200:
-        data = res.json().data
+        data = res.json()
         return templates.TemplateResponse("template.html", {"request": request, "data": data})
-
+    else:
+        raise(HTTPException(status_code=res.status_code, detail="Error"))
+        
 @app.get("/portfolio/update")
 async def updatePortfolio():
     #avanza_scraper.scrape()
-    return {"message": "Update Portfolio"}
-
+    #return {"message": "Update Portfolio"}
+    res = requests.get('http://backend/doRefresh')
+    if res.status_code == 200:
+        data = res.json()
+        return data
+    else:
+        raise(HTTPException(status_code=res.status_code, detail="Error"))
 @app.get("/portfolio/download")
 async def downloadPortfolio():
     #return FileResponse(f'{constants.excelSaveLocation}/portfolio.xlsx', media_type='application/octet-stream',filename="portfolio.xlsx")

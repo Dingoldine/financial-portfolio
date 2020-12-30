@@ -1,5 +1,6 @@
 import pandas as pd
 import os, xlrd
+from openpyxl import load_workbook
 import constants
 import logging
 
@@ -27,14 +28,17 @@ def readTxtFile(filename):
 
 def readExcel(filename):
     """Given a filename returns the excelfile as an XLRD workbook."""
-
     try:
-    # To open Workbook 
+        # To open Workbook 
         wb = xlrd.open_workbook(f'{constants.excelSaveLocation}/{filename}') 
+
+        return wb
+
     except FileNotFoundError:
         raise
     
-    return wb
+def readXLSX():
+    pass
 
 def log_error(e):
     """

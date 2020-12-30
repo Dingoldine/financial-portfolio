@@ -2,6 +2,10 @@ version: "3.8"
 services:
   frontend:
     build: ./frontend
+    volumes:
+      - type: bind
+        source: /Users/philiprumman/Projects/financial-portfolio/frontend
+        target: /app
     ports:
       - 8080:80
     depends_on:
@@ -11,5 +15,13 @@ services:
     env_file: ./env/postgres.env
   backend:
     build: ./backend
+    #entrypoint: watchmedo auto-restart --recursive --pattern="*.py" --directory="." python3 main.py
+    volumes:
+      - type: bind
+        source: /Users/philiprumman/Projects/financial-portfolio/backend/main.py
+        target: /app/main.py
+      - type: bind
+        source: /Users/philiprumman/Projects/financial-portfolio/backend/database.py
+        target: /app/database.py
     depends_on:
       - postgres

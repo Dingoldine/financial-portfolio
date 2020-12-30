@@ -99,10 +99,11 @@ class Portfolio:
         self.stocks['Weight'] = self.stocks['Market Value'] /  self.stocks_value
         self.funds['Weight'] = self.funds['Market Value'] /  self.funds_value
         
-
+    def getStocks(self):
+        return self.stocks
+    def getFunds(self):
+        return self.funds
     def checkRules(self):
-
-
         stock_weight = self.stocks_value/self.portfolio_value
         fund_weight = self.funds_value/self.portfolio_value
         cert_weight = self.cert_value/self.portfolio_value
@@ -631,10 +632,3 @@ class Portfolio:
         self.stocks.set_index(leftMostCol, inplace=True) # Turn this column to index
         Excel.create([self.stocks], "Stocks", 1)
         print("#################### END OF STOCKS #####################")
-
-
-    def updateDatabase(self):
-        db = Database()
-        db.connect()
-        db.createTableFromDF(self.stocks, 'stocks')
-        db.createTableFromDF(self.funds, 'funds')

@@ -9,7 +9,7 @@ numpy
 openpyxl
 xlsxwriter
 pandas-datareader
-xlrd
+xlrd==1.2.0
 python-dotenv 
 html5lib
 requests

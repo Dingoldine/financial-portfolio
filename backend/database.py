@@ -1,6 +1,7 @@
 import configparser, psycopg2, sys
 #from io import StringIO
 #import pandas as pd
+from sqlalchemy.orm import sessionmaker
 from sqlalchemy import pool, create_engine, Integer, String, Numeric, Float, Boolean, DateTime, BigInteger
 #import numpy as np
 class Database:
@@ -25,15 +26,17 @@ class Database:
 
             self.connection = connection
             self.cursor = cursor
-
-
-
+            
             ## SQLALCHEMY ENGINE
             self.engine = create_engine('postgresql+psycopg2://{}:{}@{}/{}'.format(self.dbConfig["user"], self.dbConfig["password"],self.dbConfig["host"], self.dbConfig["database"]), echo=False)
 
         except (Exception, psycopg2.Error) as error :
             print ("Error while connecting to PostgreSQL", error)
             sys.exit()
+
+    def getLocalSession(self):
+        SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=self.engine)
+        return SessionLocal()
 
     def create(self):
         # problem inserting numeric missing data values as with the stringIO stream we can not insert NULL,
@@ -157,4 +160,5 @@ class Database:
         return self.cursor.fetchall()
 
     def commit(self):
+        print("COMMITING: ")
         self.connection.commit()
