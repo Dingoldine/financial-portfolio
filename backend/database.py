@@ -9,6 +9,10 @@ class Database:
     def __init__(self):
         Config = configparser.ConfigParser()
         Config.read('./config.ini')
+        
+        if (Config["MODE"]["development"]):
+            Config["DATABASE"]["host"] = "localhost"
+
         self.dbConfig = dict(Config.items("DATABASE"))
 
     def connect(self):
@@ -27,7 +31,7 @@ class Database:
             self.connection = connection
             self.cursor = cursor
             
-            ## SQLALCHEMY ENGINE
+            ## SQLALCHEMY ENGINE-
             self.engine = create_engine('postgresql+psycopg2://{}:{}@{}/{}'.format(self.dbConfig["user"], self.dbConfig["password"],self.dbConfig["host"], self.dbConfig["database"]), echo=False)
 
         except (Exception, psycopg2.Error) as error :
@@ -90,8 +94,8 @@ class Database:
         for command in sql_commands:
             self.query(command)
 
-        #self.create()
-        self.commit()
+        self.create()
+
     
     
     def createTableFromDF(self, df, tableName):
@@ -155,6 +159,14 @@ class Database:
         print("executing: ", query)
         self.cursor.execute(query)
 
+    def getColumnNames(self, tableName):
+        # self.cursor.execute("SELECT current_schema();")
+        # self.cursor.execute("SELECT * FROM stocks;")
+        result = []
+        self.cursor.execute("SELECT column_name FROM information_schema.columns WHERE table_schema = 'public' AND table_name = '{}';".format(tableName))
+        for col in self.cursor.fetchall():
+            result.append(col[0].upper())
+        return result
     def fetch_stocks(self):
         self.cursor.execute("SELECT * FROM stocks")
         return self.cursor.fetchall()

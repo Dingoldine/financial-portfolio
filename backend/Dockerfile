@@ -14,4 +14,4 @@ COPY . .
 EXPOSE 80
 
 #CMD ["python3", "main.py"]
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--debug", "--port", "80", "--reload-dir", "/app"]
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "80", "--reload-dir", "/app"]

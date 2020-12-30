@@ -6,7 +6,6 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import NoSuchElementException, TimeoutException
-
 from helpermodules import Excel, Utils
 from scrapers._scraping_functions import waitforload, clickElement 
 import constants
@@ -282,10 +281,12 @@ def _loginToAvanza(url, payload):
     """Function that log in to Avanza, returns selenium driver object"""
     
     opt = webdriver.FirefoxOptions()
-    #opt.add_argument('-headless')
-    
-    browser = webdriver.Firefox(options=opt, service_log_path=constants.GECKO_LOG_PATH)
-    
+    fp = webdriver.FirefoxProfile()
+    #opt.binary_location = ""
+    opt.add_argument('-headless')
+    opt.profile = fp
+    #opt.binary = "/var/lib/flatpak/app/org.mozilla.Firefox/x86_64/stable/e3a974bd5b0a8a360d611a1d78405c88a18af5bfe9cd89f60af697723e439d98/export/bin/org.mozilla.Firefox"
+    browser = webdriver.Firefox(options=opt, service_log_path=constants.GECKO_LOG_PATH, executable_path="/home/philip/projects/avanza-scraper/backend/geckodriver/geckodriver")
     # poll for elements for --  seconds max, before shutdown
     browser.implicitly_wait(0)
     wait = WebDriverWait(browser, 35)

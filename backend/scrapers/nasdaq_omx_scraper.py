@@ -11,7 +11,8 @@ import constants
 from helpermodules import Utils, Excel
 import time, os, shutil, sys
 from scrapers._scraping_functions import waitforload, clickElement
-
+from .  import __event_watcher
+from multiprocessing import Process
 
 def organizeDataframe(df):
     df=df.rename(columns = {'Unnamed: 0': 'Data'}) # rename
@@ -178,6 +179,9 @@ def saveStockInfoToExcel():
 
 
 def scrape():
+    fileWatcherProcess = Process(target=__event_watcher.startObserver, args=())
+    fileWatcherProcess.start()
+
     df_map = pd.read_excel(f'{constants.excelSaveLocation}/portfolio.xlsx', sheet_name=None)
     stocks = df_map.get("Stocks", None)
     # Scrape Nasdaq Nordic 
@@ -197,6 +201,7 @@ def scrape():
     fp.set_preference("browser.download.folderList", 2)
     
     opt = webdriver.FirefoxOptions()
+    opt.add_argument('-headless')
     browser = webdriver.Firefox(options=opt, firefox_profile=fp, service_log_path=constants.GECKO_LOG_PATH)
     
     # poll for elements for --  seconds max, before shutdown
@@ -352,6 +357,10 @@ def scrape():
             #click instantly downloads because of browser preferences
             clickElement(browser, factsheetLinkXPATH, 5)
         
+        browser.quit()
+        fileWatcherProcess.terminate()
+        saveStockInfoToExcel()
+
     except Exception as e:
         Utils.log_error(e)
         browser.quit()

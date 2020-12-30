@@ -103,6 +103,10 @@ class Portfolio:
         return self.stocks
     def getFunds(self):
         return self.funds
+
+    def generateStocksExcel(self):
+        Excel.create([self.stocks], "Stocks", 1)
+    
     def checkRules(self):
         stock_weight = self.stocks_value/self.portfolio_value
         fund_weight = self.funds_value/self.portfolio_value
@@ -630,5 +634,5 @@ class Portfolio:
         self.stocks.name = "Stocks"
         leftMostCol = self.stocks.columns.values[0]
         self.stocks.set_index(leftMostCol, inplace=True) # Turn this column to index
-        Excel.create([self.stocks], "Stocks", 1)
+
         print("#################### END OF STOCKS #####################")

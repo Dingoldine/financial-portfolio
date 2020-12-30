@@ -1,15 +1,15 @@
-from fastapi import FastAPI, Request, Response, Depends
+from fastapi import FastAPI, Request, Response, Depends, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
-import uvicorn
 import constants
 from sqlalchemy.orm import Session
 from database import Database
-from scrapers import avanza_scraper, nasdaq_omx_scraper, event_watcher
+from scrapers import avanza_scraper, nasdaq_omx_scraper
 from portfolio import Portfolio
-from multiprocessing import Process
 from helpermodules import valuation
 import time
 
+db = None
+P = None
 
 app = FastAPI()
 
@@ -46,12 +46,10 @@ async def startup():
     db.connect()
     db.create()
     db.commit()
-    
 @app.on_event("shutdown")
 async def shutdown():
-    print("server shutting down...")
+    print("server shutting down....")
     await db.disconnect()
-
 
 
 
@@ -78,20 +76,31 @@ async def shutdown():
     #fileWatcherProcess.terminate() """
 
 
-
 @app.get("/getPortfolio")
 async def getPortfolio():
     data = db.fetch_stocks()
-    return data
+    columns = db.getColumnNames('stocks')
+    return {"data": data, "columns": columns}
 
 @app.get("/doRefresh")
-def doRefresh(dbSession: Session = Depends(get_db)):
-    P.stocksBreakdown()
-    stocks = P.getStocks()
-    db.createTableFromDF(stocks, "stocks")
-    result = dbSession.execute("SELECT * FROM stocks")
-    return result.fetchall()
+def doRefresh(background_tasks: BackgroundTasks, dbSession: Session = Depends(get_db)):
+    ## LOOK INTO CELERY, EVENT STREAMS ETC
+    background_tasks(tasks=[
+        avanza_scraper.scrape(),
+        nasdaq_omx_scraper.scrape(),
+        P.stocksBreakdown(),
+        db.createTableFromDF(P.getStocks(), "stocks")
+    ])
+
+    return {"message": "update request received"}
     
+
+
+@app.get("/resetDatabase")
+def resetDatabase():
+    db.reset()
+    db.commit()
+    return {"message": "reset complete"}
 
 
 
