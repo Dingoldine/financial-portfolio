@@ -76,8 +76,14 @@ async def shutdown():
     #fileWatcherProcess.terminate() """
 
 
-@app.get("/getPortfolio")
-async def getPortfolio():
+@app.get("/getFunds")
+async def getFunds():
+    data = db.fetch_funds()
+    columns = db.getColumnNames('funds')
+    return {"data": data, "columns": columns}
+
+@app.get("/getStocks")
+async def getStocks():
     data = db.fetch_stocks()
     columns = db.getColumnNames('stocks')
     return {"data": data, "columns": columns}
@@ -89,7 +95,9 @@ def doRefresh(background_tasks: BackgroundTasks, dbSession: Session = Depends(ge
         avanza_scraper.scrape(),
         nasdaq_omx_scraper.scrape(),
         P.stocksBreakdown(),
-        db.createTableFromDF(P.getStocks(), "stocks")
+        P.fundsBreakdown(),
+        db.createTableFromDF(P.getStocks(), "stocks"),
+        db.createTableFromDF(P.getFunds(), "funds")
     ])
 
     return {"message": "update request received"}

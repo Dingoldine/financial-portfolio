@@ -167,8 +167,13 @@ class Database:
         for col in self.cursor.fetchall():
             result.append(col[0].upper())
         return result
+
     def fetch_stocks(self):
         self.cursor.execute("SELECT * FROM stocks")
+        return self.cursor.fetchall()
+
+    def fetch_funds(self):
+        self.cursor.execute("SELECT * FROM funds")
         return self.cursor.fetchall()
 
     def commit(self):

@@ -129,9 +129,14 @@ class Portfolio:
         
     def parseFundDetailsPage(self, instrument):
         html = Utils.readTxtFile(instrument)
-
+        print(instrument)
         soup = BeautifulSoup(html, 'lxml')
-        fee = soup.find("h3", attrs= {'data-e2e': 'fon-guide-total-fee'}).text.strip()
+        fee_tag = soup.find("h2", attrs= {'data-e2e': 'fon-guide-total-fee'})
+
+        if (fee_tag):
+            fee = fee_tag.text.strip()
+        else:
+            raise Exception("Attribute 'data-e2e': 'fon-guide-total-fee' not fouund")
 
         keyData = soup.find_all('div', {'class': 'border-space-item'})
         
