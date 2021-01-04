@@ -1,0 +1,13 @@
+
+.thead-dark {
+    background: #5494864a;
+    height: 45px;
+    padding: 10px;
+    border-style: unset;
+}
+
+.table-wrapper {
+    text-align: center;
+    height: fit-content;
+    width: 100%;
+}

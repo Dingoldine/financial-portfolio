@@ -1,0 +1,54 @@
+{% extends 'base.html' %}
+{% block title %}Stocks{% endblock %}
+{% set active_page = 'Stocks' %}
+{% block content %}
+<link rel="stylesheet" href="../static/home_page/home.css" type="text/css" />
+<div class="row justify-content-center">
+  <div class="col-md-8">
+    <div class="graph-wrapper">
+      <div id="my_dataviz"></div>
+    </div>
+  </div>
+</div>
+<div class="row justify-content-center">
+    <div class="col-md-8">
+      <div class="table-wrapper table-responsive">
+        <table id="fund-table" class="table-striped table-bordered" cellspacing="0px" cellpadding="5px">
+          <thead class="thead-dark" border=0>
+            {% for header in fund_columns %}
+            <th scope="col" class=""> {{header}} </td>
+              {% endfor %}
+          </thead>
+          <tbody>
+            {% for fund in fund_data %}
+            <tr>
+              {% for col in stock %}
+              <td nowrap> {{col}} </td>
+              {% endfor %}
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+<script type="text/javascript">
+  const data = {{fund_data | tojson}}; 
+  //console.log(data)
+  const svg = d3.create("svg");
+
+  var circle = svg
+    .append("circle")
+    .attr("cx", 50)
+    .attr("cy", 50)
+    .attr("r", 50);
+
+  d3.select("#my_dataviz")
+    .append(() => svg.node());
+</script>
+
+{% endblock %}
+
+
+</html>
