@@ -4,13 +4,14 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import NoSuchElementException, TimeoutException, UnexpectedAlertPresentException, \
 ElementClickInterceptedException, MoveTargetOutOfBoundsException
 from selenium.webdriver.common.by import By
-
-def clickElement(browser, XPATH, maxWaitTime):
+import time
+def clickElement(browser, XPATH, maxWaitTime, extraWaitTime = 0):
     wait = WebDriverWait(browser, maxWaitTime)
     error = ""
     moveToTarget = True
     retries = 0
     while retries < 5:
+        time.sleep(extraWaitTime) #wait 
         print('Clicking Element:', XPATH)
         print('Attempt Number:', retries + 1)
         try:
@@ -29,7 +30,9 @@ def clickElement(browser, XPATH, maxWaitTime):
             if (isinstance(e, MoveTargetOutOfBoundsException)):
                 moveToTarget = False
             browser.refresh()
+            # increase max wait time, maybe a slow element
             waitforload(browser, maxWaitTime)
+            extraWaitTime += 1
             retries += 1
             error = e
     

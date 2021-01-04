@@ -102,7 +102,7 @@ def _parseHTML(data):
 def _buildDataframe(headers, rows, caption):
     print(caption)
     unnecessary_columns = ['+/- %', 'Konto', 'Senast', 'Tid']
-    new_column_names = ['Asset', 'Amount', 'Purchase', 'Market Value', 'Change', 'Profit']
+    new_column_names = ['Asset', 'Shares', 'Purchase', 'Market Value', 'Change', 'Profit']
     
     def stocks(headers, rows):
         #cleanup headers
@@ -247,7 +247,7 @@ def _get_portfolio(browser):
             fundDetailsButtonXPATH = '/html/body/aza-app/div/main/div/aza-fund-guide/aza-subpage/div/div/ \
             div/div[2]/div[1]/aza-card[2]/div/div[1]/aza-toggle-switch/aza-toggle-option[3]/button'
 
-            clickElement(browser, fundDetailsButtonXPATH, 5)
+            clickElement(browser, fundDetailsButtonXPATH, 5, extraWaitTime=3)
 
             # wait for fund details to load
             fundDetailsBoxXPATH = '/html/body/aza-app/div/main/div/aza-fund-guide/ \

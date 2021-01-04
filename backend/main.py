@@ -90,7 +90,7 @@ async def getStocks():
 
 @app.get("/doRefresh")
 def doRefresh(background_tasks: BackgroundTasks, dbSession: Session = Depends(get_db)):
-    ## LOOK INTO CELERY, EVENT STREAMS ETC
+    ## LOOK INTO CELERY, REDIS, EVENT STREAMS AND QUEUES ETC
     background_tasks(tasks=[
         avanza_scraper.scrape(),
         nasdaq_omx_scraper.scrape(),
