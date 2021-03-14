@@ -15,6 +15,7 @@ class Database:
 
         self.dbConfig = dict(Config.items("DATABASE"))
 
+
     def connect(self):
         try:
             connection = psycopg2.connect(**self.dbConfig)
@@ -36,7 +37,7 @@ class Database:
 
         except (Exception, psycopg2.Error) as error :
             print ("Error while connecting to PostgreSQL", error)
-            sys.exit()
+            sys.exit(-1)
 
     def getLocalSession(self):
         SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=self.engine)
@@ -98,7 +99,7 @@ class Database:
 
     
     
-    def createTableFromDF(self, df, tableName):
+    async def createTableFromDF(self, df, tableName):
 
         indexName = 'unnamed' if df.index.name is None else df.index.name.lower()
         df = df.copy()
@@ -119,7 +120,7 @@ class Database:
         dTypeDict = dict(df.dtypes.apply(changeType))
         print(dTypeDict)
         try:
-            df.to_sql(tableName, con=self.engine, index=False, dtype=dTypeDict, if_exists='replace')
+            await df.to_sql(tableName, con=self.engine, index=False, dtype=dTypeDict, if_exists='replace')
             
             # print(self.engine.execute(f'SELECT * FROM {tableName}').fetchall())
         

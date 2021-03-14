@@ -257,21 +257,23 @@ def _get_portfolio(browser):
             )
             
             html = BeautifulSoup(browser.page_source, 'lxml')
+            # store page content
+            fundDictionary.update({instrument: str(html)})
 
-            Utils.saveTxtFile(str(html.prettify()), instrument)
+            #Utils.saveTxtFile(str(html.prettify()), instrument)
 
         #go back
         browser.execute_script(f'window.history.go(-{len(fundDictionary)})')
         
-        #wait for javascript to load then scrape
+        #wait for javascript to load then scrape--
         time.sleep(5)
         soup  = BeautifulSoup(browser.page_source, 'lxml')
     
-        return str(soup.prettify())
+        return str(soup.prettify()), fundDictionary
 
     except Exception as e:
         Utils.log_error(e)
-        sys.exit(e)
+        raise
 
     finally:
         browser.quit()
@@ -316,7 +318,7 @@ def _loginToAvanza(url, payload):
         username.send_keys(payload.get("pid"))
     except Exception as e:
         Utils.log_error(e)
-        sys.exit(e)
+        raise
 
     clickElement(browser, loginButtonXPATH, 5)
 
@@ -330,7 +332,7 @@ def _loginToAvanza(url, payload):
     except TimeoutException as e:
         print("AUTHENTICATION TOOK TOO LONG")
         browser.quit()
-        sys.exit(e)
+        raise
 
     
     return browser
@@ -345,14 +347,17 @@ def scrape():
     }
 
     # login and get new data
-    browser = _loginToAvanza(login_url, payload)
+    #browser = _loginToAvanza(login_url, payload)
 
-    html = _get_portfolio(browser)
+    #html, fund_details_dict = _get_portfolio(browser)
 
     # for reuse
-    Utils.saveTxtFile(html, 'htmlAvanza') 
-    # html = Utils.readTxtFile('htmlAvanza')
-    
+    #Utils.saveTxtFile(html, 'htmlAvanza') 
+    html = Utils.readTxtFile('htmlAvanza')
+
     dataframes = _parseHTML(html)
 
-    Excel.create(dataframes, 'portfolio', 1)
+    # Perhaps send to Cloud object storage
+    #Excel.create(dataframes, 'portfolio', 1)
+    fund_details_dict = {}
+    return dataframes, fund_details_dict

@@ -27,3 +27,13 @@ services:
         target: /app/database.py
     depends_on:
       - postgres
+      - rabbit
+  worker:
+    image: docker.io/celery_simple:latest
+    entrypoint: celery -A celery_worker worker -c 2 --loglevel=info
+  rabbit:
+    image: rabbitmq:3.8.9
+    hostname: "rabbit"
+    env_file: ./env/rabbit.env
+    expose:
+      - 5672

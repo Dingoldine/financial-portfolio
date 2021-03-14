@@ -28,8 +28,6 @@ import os
 import sys
 import re
 
-from database import Database
-
 # for complex string matching
 from fuzzywuzzy import fuzz, process
 
@@ -69,7 +67,7 @@ class Portfolio:
     target_bonds = 0.1 
     target_alternative = 0
 
-    def __init__(self):
+    def __init__(self, dataframes, funds_info):
         assert(self.target_bonds + self.target_developing_markets + self.target_global + \
             self.target_nordic + self.target_alternative + self.target_eu == 1) # make sure fund allocation rules make sense
         

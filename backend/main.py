@@ -1,12 +1,14 @@
-from fastapi import FastAPI, Request, Response, Depends, BackgroundTasks
+from fastapi import FastAPI, Request, Response, Depends, BackgroundTasks 
 from fastapi.middleware.cors import CORSMiddleware
 import constants
 from sqlalchemy.orm import Session
 from database import Database
-from scrapers import avanza_scraper, nasdaq_omx_scraper
-from portfolio import Portfolio
 from helpermodules import valuation
 import time
+from multiprocessing import Process
+import time
+from celery_worker import updatePortfolio
+
 
 db = None
 P = None
@@ -41,7 +43,6 @@ async def startup():
     print("starting server....")
     global db
     global P
-    P = Portfolio()
     db = Database()
     db.connect()
     db.create()
@@ -50,7 +51,6 @@ async def startup():
 async def shutdown():
     print("server shutting down....")
     await db.disconnect()
-
 
 
 
@@ -89,9 +89,18 @@ async def getStocks():
     return {"data": data, "columns": columns}
 
 @app.get("/doRefresh")
-def doRefresh(background_tasks: BackgroundTasks, dbSession: Session = Depends(get_db)):
+
+
+
+# I'm using fastAPI exactly like this, combining concurrent.futures.ProcessPoolExecutor() and asyncio to manage long running jobs.
+
+# If you don't want to rely on other modules (celery etc), you need to manage yourself the state of your job, and store it somewhere. I store it in the DB so that pending jobs can be resumed after a restart of the server.
+
+# Note that you must NOT perform CPU intensive computations in the background_tasks of the app, because it runs in the same async event loop that serves the requests and it will stall your app. Instead submit them to a thread pool or a process pool.
+
+def doRefresh(dbSession: Session = Depends(get_db)):
     ## LOOK INTO CELERY, REDIS, EVENT STREAMS AND QUEUES ETC
-    background_tasks(tasks=[
+    """     background_tasks(tasks=[
         avanza_scraper.scrape(),
         nasdaq_omx_scraper.scrape(),
         P.stocksBreakdown(),
@@ -99,10 +108,26 @@ def doRefresh(background_tasks: BackgroundTasks, dbSession: Session = Depends(ge
         db.createTableFromDF(P.getStocks(), "stocks"),
         db.createTableFromDF(P.getFunds(), "funds")
     ])
-
+     """
+    res = updatePortfolio.delay()
+    #print(res.status) # 'SUCCESS'
+    #print(res.id) # '432890aa-4f02-437d-aaca-1999b70efe8d'
     return {"message": "update request received"}
-    
 
+def __test():
+    print("starting task")
+    time.sleep(10)
+    print("complete")
+@app.get("/testMulti")
+def testMulti():
+    # fileWatcherProcess = Process(target=__test, args=())
+    # fileWatcherProcess.start()
+    # fileWatcherProcess.terminate()
+    #background_tasks.add_task(__test)
+
+    res = add.delay(1, 2)
+
+    return {'message': res}
 
 @app.get("/resetDatabase")
 def resetDatabase():
