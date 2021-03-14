@@ -11,10 +11,10 @@ Config = configparser.ConfigParser()
 Config.read('./config.ini')
 
 
-if (Config["MODE"]["development"]):
+if (Config["NETWORK-MODE"]["localhost"] == True):
     broker = f'pyamqp://{Config["CELERY"]["RABBITMQ_DEFAULT_USER"]}:{Config["CELERY"]["RABBITMQ_DEFAULT_PASS"]}@localhost'
 else:
-    broker = "my-cloudampq-broker"
+    broker = f'pyamqp://{Config["CELERY"]["RABBITMQ_DEFAULT_USER"]}:{Config["CELERY"]["RABBITMQ_DEFAULT_PASS"]}@rabbit'
 
 # Create the celery app and get the logger
 try:

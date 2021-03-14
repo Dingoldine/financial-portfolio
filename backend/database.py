@@ -10,7 +10,7 @@ class Database:
         Config = configparser.ConfigParser()
         Config.read('./config.ini')
         
-        if (Config["MODE"]["development"]):
+        if (Config["NETWORK-MODE"]["localhost"] == True):
             Config["DATABASE"]["host"] = "localhost"
 
         self.dbConfig = dict(Config.items("DATABASE"))
