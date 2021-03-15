@@ -9,7 +9,7 @@ import os
 
 Config = configparser.ConfigParser()
 Config.read('./config.ini')
-server_host_address = "localhost:8080" if (Config["MODE"]["development"]) else "backend" 
+server_host_address = "localhost:8080" if (Config["NETWORK-MODE"]["localhost"] == True) else "backend" 
 
 app = FastAPI()
 app.mount("/static", StaticFiles(directory="static"), name="static")

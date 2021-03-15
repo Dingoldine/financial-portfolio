@@ -29,8 +29,12 @@ services:
       - postgres
       - rabbit
   worker:
-    image: docker.io/celery_simple:latest
+    build: ./backend
+    environment:
+      - C_FORCE_ROOT=true
     entrypoint: celery -A celery_worker worker -c 2 --loglevel=info
+    depends_on:
+      - rabbit
   rabbit:
     image: rabbitmq:3.8.9
     hostname: "rabbit"
