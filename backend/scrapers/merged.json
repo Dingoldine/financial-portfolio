@@ -1,0 +1,1762 @@
+{
+  "5249449": [
+    {
+      "name": "id",
+      "value": "5249449",
+      "isAdded": true
+    },
+    {
+      "name": "positionType",
+      "value": "PRODUCT",
+      "isAdded": true
+    },
+    {
+      "name": "size",
+      "value": 6,
+      "isAdded": true
+    },
+    {
+      "name": "price",
+      "value": 233.78,
+      "isAdded": true
+    },
+    {
+      "name": "value",
+      "value": 11968.395609756097,
+      "isAdded": true
+    },
+    {
+      "name": "accruedInterest",
+      "isAdded": true
+    },
+    {
+      "name": "plBase",
+      "value": {
+        "SEK": -11297.29
+      },
+      "isAdded": true
+    },
+    {
+      "name": "todayPlBase",
+      "value": {
+        "SEK": -11968.395609756097
+      },
+      "isAdded": true
+    },
+    {
+      "name": "portfolioValueCorrection",
+      "value": 0,
+      "isAdded": true
+    },
+    {
+      "name": "breakEvenPrice",
+      "value": 229.0,
+      "isAdded": true
+    },
+    {
+      "name": "averageFxRate",
+      "value": 8.2183757,
+      "isAdded": true
+    },
+    {
+      "name": "realizedProductPl",
+      "value": -5.2417882,
+      "isAdded": true
+    },
+    {
+      "name": "realizedFxPl",
+      "value": 0,
+      "isAdded": true
+    },
+    {
+      "name": "todayRealizedProductPl",
+      "value": 0.0,
+      "isAdded": true
+    },
+    {
+      "name": "todayRealizedFxPl",
+      "value": 0,
+      "isAdded": true
+    }
+  ],
+  "16491370": [
+    {
+      "name": "id",
+      "value": "16491370",
+      "isAdded": true
+    },
+    {
+      "name": "positionType",
+      "value": "PRODUCT",
+      "isAdded": true
+    },
+    {
+      "name": "size",
+      "value": 8,
+      "isAdded": true
+    },
+    {
+      "name": "price",
+      "value": 105.13,
+      "isAdded": true
+    },
+    {
+      "name": "value",
+      "value": 7176.190894308943,
+      "isAdded": true
+    },
+    {
+      "name": "accruedInterest",
+      "isAdded": true
+    },
+    {
+      "name": "plBase",
+      "value": {
+        "SEK": -8006.1
+      },
+      "isAdded": true
+    },
+    {
+      "name": "todayPlBase",
+      "value": {
+        "SEK": -7176.190894308943
+      },
+      "isAdded": true
+    },
+    {
+      "name": "portfolioValueCorrection",
+      "value": 0,
+      "isAdded": true
+    },
+    {
+      "name": "breakEvenPrice",
+      "value": 119.21,
+      "isAdded": true
+    },
+    {
+      "name": "averageFxRate",
+      "value": 8.3893574,
+      "isAdded": true
+    },
+    {
+      "name": "realizedProductPl",
+      "value": -5.337634768,
+      "isAdded": true
+    },
+    {
+      "name": "realizedFxPl",
+      "value": 0,
+      "isAdded": true
+    },
+    {
+      "name": "todayRealizedProductPl",
+      "value": 0.0,
+      "isAdded": true
+    },
+    {
+      "name": "todayRealizedFxPl",
+      "value": 0,
+      "isAdded": true
+    }
+  ],
+  "331969": [
+    {
+      "name": "id",
+      "value": "331969",
+      "isAdded": true
+    },
+    {
+      "name": "positionType",
+      "value": "PRODUCT",
+      "isAdded": true
+    },
+    {
+      "name": "size",
+      "value": 1,
+      "isAdded": true
+    },
+    {
+      "name": "price",
+      "value": 3000.46,
+      "isAdded": true
+    },
+    {
+      "name": "value",
+      "value": 25601.48593495935,
+      "isAdded": true
+    },
+    {
+      "name": "accruedInterest",
+      "isAdded": true
+    },
+    {
+      "name": "plBase",
+      "value": {
+        "SEK": -27299.32
+      },
+      "isAdded": true
+    },
+    {
+      "name": "todayPlBase",
+      "value": {
+        "SEK": -25601.48593495935
+      },
+      "isAdded": true
+    },
+    {
+      "name": "portfolioValueCorrection",
+      "value": 0,
+      "isAdded": true
+    },
+    {
+      "name": "breakEvenPrice",
+      "value": 3244.17,
+      "isAdded": true
+    },
+    {
+      "name": "averageFxRate",
+      "value": 8.413307,
+      "isAdded": true
+    },
+    {
+      "name": "realizedProductPl",
+      "value": -5.12182981,
+      "isAdded": true
+    },
+    {
+      "name": "realizedFxPl",
+      "value": 0,
+      "isAdded": true
+    },
+    {
+      "name": "todayRealizedProductPl",
+      "value": 0.0,
+      "isAdded": true
+    },
+    {
+      "name": "todayRealizedFxPl",
+      "value": 0,
+      "isAdded": true
+    }
+  ],
+  "15064814": [
+    {
+      "name": "id",
+      "value": "15064814",
+      "isAdded": true
+    },
+    {
+      "name": "positionType",
+      "value": "PRODUCT",
+      "isAdded": true
+    },
+    {
+      "name": "size",
+      "value": 40,
+      "isAdded": true
+    },
+    {
+      "name": "price",
+      "value": 12.94,
+      "isAdded": true
+    },
+    {
+      "name": "value",
+      "value": 4416.432520325203,
+      "isAdded": true
+    },
+    {
+      "name": "accruedInterest",
+      "isAdded": true
+    },
+    {
+      "name": "plBase",
+      "value": {
+        "SEK": -5021.5
+      },
+      "isAdded": true
+    },
+    {
+      "name": "todayPlBase",
+      "value": {
+        "SEK": -4416.432520325203
+      },
+      "isAdded": true
+    },
+    {
+      "name": "portfolioValueCorrection",
+      "value": 0,
+      "isAdded": true
+    },
+    {
+      "name": "breakEvenPrice",
+      "value": 15.0,
+      "isAdded": true
+    },
+    {
+      "name": "averageFxRate",
+      "value": 8.3584948,
+      "isAdded": true
+    },
+    {
+      "name": "realizedProductPl",
+      "value": -6.40312,
+      "isAdded": true
+    },
+    {
+      "name": "realizedFxPl",
+      "value": 0,
+      "isAdded": true
+    },
+    {
+      "name": "todayRealizedProductPl",
+      "value": 0.0,
+      "isAdded": true
+    },
+    {
+      "name": "todayRealizedFxPl",
+      "value": 0,
+      "isAdded": true
+    }
+  ],
+  "15858051": [
+    {
+      "name": "id",
+      "value": "15858051",
+      "isAdded": true
+    },
+    {
+      "name": "positionType",
+      "value": "PRODUCT",
+      "isAdded": true
+    },
+    {
+      "name": "size",
+      "value": 30,
+      "isAdded": true
+    },
+    {
+      "name": "price",
+      "value": 37.59,
+      "isAdded": true
+    },
+    {
+      "name": "value",
+      "value": 9622.123170731707,
+      "isAdded": true
+    },
+    {
+      "name": "accruedInterest",
+      "isAdded": true
+    },
+    {
+      "name": "plBase",
+      "value": {
+        "SEK": -12471.46
+      },
+      "isAdded": true
+    },
+    {
+      "name": "todayPlBase",
+      "value": {
+        "SEK": -9622.123170731707
+      },
+      "isAdded": true
+    },
+    {
+      "name": "portfolioValueCorrection",
+      "value": 0,
+      "isAdded": true
+    },
+    {
+      "name": "breakEvenPrice",
+      "value": 49.916666666666664,
+      "isAdded": true
+    },
+    {
+      "name": "averageFxRate",
+      "value": 8.317421770250418,
+      "isAdded": true
+    },
+    {
+      "name": "realizedProductPl",
+      "value": -16.12089905,
+      "isAdded": true
+    },
+    {
+      "name": "realizedFxPl",
+      "value": 0,
+      "isAdded": true
+    },
+    {
+      "name": "todayRealizedProductPl",
+      "value": 0.0,
+      "isAdded": true
+    },
+    {
+      "name": "todayRealizedFxPl",
+      "value": 0,
+      "isAdded": true
+    }
+  ],
+  "5466005": [
+    {
+      "name": "id",
+      "value": "5466005",
+      "isAdded": true
+    },
+    {
+      "name": "positionType",
+      "value": "CASH",
+      "isAdded": true
+    },
+    {
+      "name": "size",
+      "value": 0.0,
+      "isAdded": true
+    },
+    {
+      "name": "price",
+      "value": 0.9881,
+      "isAdded": true
+    },
+    {
+      "name": "value",
+      "value": 0.0,
+      "isAdded": true
+    },
+    {
+      "name": "accruedInterest",
+      "isAdded": true
+    },
+    {
+      "name": "plBase",
+      "value": {
+        "SEK": -21.17024705
+      },
+      "isAdded": true
+    },
+    {
+      "name": "todayPlBase",
+      "value": {
+        "SEK": 0.0
+      },
+      "isAdded": true
+    },
+    {
+      "name": "portfolioValueCorrection",
+      "value": 0,
+      "isAdded": true
+    },
+    {
+      "name": "breakEvenPrice",
+      "value": 0,
+      "isAdded": true
+    },
+    {
+      "name": "averageFxRate",
+      "value": 1,
+      "isAdded": true
+    },
+    {
+      "name": "realizedProductPl",
+      "value": -21.17024705,
+      "isAdded": true
+    },
+    {
+      "name": "realizedFxPl",
+      "value": 0.0,
+      "isAdded": true
+    },
+    {
+      "name": "todayRealizedProductPl",
+      "value": 0.0,
+      "isAdded": true
+    },
+    {
+      "name": "todayRealizedFxPl",
+      "value": 0.0,
+      "isAdded": true
+    }
+  ],
+  "15794832": [
+    {
+      "name": "id",
+      "value": "15794832",
+      "isAdded": true
+    },
+    {
+      "name": "positionType",
+      "value": "PRODUCT",
+      "isAdded": true
+    },
+    {
+      "name": "size",
+      "value": 55,
+      "isAdded": true
+    },
+    {
+      "name": "price",
+      "value": 19.3,
+      "isAdded": true
+    },
+    {
+      "name": "value",
+      "value": 9057.270325203252,
+      "isAdded": true
+    },
+    {
+      "name": "accruedInterest",
+      "isAdded": true
+    },
+    {
+      "name": "plBase",
+      "value": {
+        "SEK": -13241.4
+      },
+      "isAdded": true
+    },
+    {
+      "name": "todayPlBase",
+      "value": {
+        "SEK": -9057.270325203252
+      },
+      "isAdded": true
+    },
+    {
+      "name": "portfolioValueCorrection",
+      "value": 0,
+      "isAdded": true
+    },
+    {
+      "name": "breakEvenPrice",
+      "value": 29.015636363636364,
+      "isAdded": true
+    },
+    {
+      "name": "averageFxRate",
+      "value": 8.289878941719198,
+      "isAdded": true
+    },
+    {
+      "name": "realizedProductPl",
+      "value": -11.913792068,
+      "isAdded": true
+    },
+    {
+      "name": "realizedFxPl",
+      "value": 0,
+      "isAdded": true
+    },
+    {
+      "name": "todayRealizedProductPl",
+      "value": 0.0,
+      "isAdded": true
+    },
+    {
+      "name": "todayRealizedFxPl",
+      "value": 0,
+      "isAdded": true
+    }
+  ],
+  "8267043": [
+    {
+      "name": "id",
+      "value": "8267043",
+      "isAdded": true
+    },
+    {
+      "name": "positionType",
+      "value": "PRODUCT",
+      "isAdded": true
+    },
+    {
+      "name": "size",
+      "value": 0,
+      "isAdded": true
+    },
+    {
+      "name": "price",
+      "value": 124.68,
+      "isAdded": true
+    },
+    {
+      "name": "value",
+      "value": 0.0,
+      "isAdded": true
+    },
+    {
+      "name": "accruedInterest",
+      "isAdded": true
+    },
+    {
+      "name": "plBase",
+      "value": {
+        "SEK": 440.7
+      },
+      "isAdded": true
+    },
+    {
+      "name": "todayPlBase",
+      "value": {
+        "SEK": 0.0
+      },
+      "isAdded": true
+    },
+    {
+      "name": "portfolioValueCorrection",
+      "value": 0,
+      "isAdded": true
+    },
+    {
+      "name": "breakEvenPrice",
+      "value": 0,
+      "isAdded": true
+    },
+    {
+      "name": "averageFxRate",
+      "value": 1,
+      "isAdded": true
+    },
+    {
+      "name": "realizedProductPl",
+      "value": 78.1694316,
+      "isAdded": true
+    },
+    {
+      "name": "realizedFxPl",
+      "value": 362.5305684,
+      "isAdded": true
+    },
+    {
+      "name": "todayRealizedProductPl",
+      "value": 0.0,
+      "isAdded": true
+    },
+    {
+      "name": "todayRealizedFxPl",
+      "value": 0.0,
+      "isAdded": true
+    }
+  ],
+  "15644836": [
+    {
+      "name": "id",
+      "value": "15644836",
+      "isAdded": true
+    },
+    {
+      "name": "positionType",
+      "value": "PRODUCT",
+      "isAdded": true
+    },
+    {
+      "name": "size",
+      "value": 1500,
+      "isAdded": true
+    },
+    {
+      "name": "price",
+      "value": 0.458,
+      "isAdded": true
+    },
+    {
+      "name": "value",
+      "value": 6981.707317073171,
+      "isAdded": true
+    },
+    {
+      "name": "accruedInterest",
+      "isAdded": true
+    },
+    {
+      "name": "plBase",
+      "value": {
+        "SEK": -7652.78
+      },
+      "isAdded": true
+    },
+    {
+      "name": "todayPlBase",
+      "value": {
+        "SEK": -6981.707317073171
+      },
+      "isAdded": true
+    },
+    {
+      "name": "portfolioValueCorrection",
+      "value": 0,
+      "isAdded": true
+    },
+    {
+      "name": "breakEvenPrice",
+      "value": 0.5,
+      "isAdded": true
+    },
+    {
+      "name": "averageFxRate",
+      "value": 10.0936936,
+      "isAdded": true
+    },
+    {
+      "name": "realizedProductPl",
+      "value": -82.5098,
+      "isAdded": true
+    },
+    {
+      "name": "realizedFxPl",
+      "value": 0,
+      "isAdded": true
+    },
+    {
+      "name": "todayRealizedProductPl",
+      "value": 0.0,
+      "isAdded": true
+    },
+    {
+      "name": "todayRealizedFxPl",
+      "value": 0,
+      "isAdded": true
+    }
+  ],
+  "1533610": [
+    {
+      "name": "id",
+      "value": "1533610",
+      "isAdded": true
+    },
+    {
+      "name": "positionType",
+      "value": "PRODUCT",
+      "isAdded": true
+    },
+    {
+      "name": "size",
+      "value": 5,
+      "isAdded": true
+    },
+    {
+      "name": "price",
+      "value": 264.28,
+      "isAdded": true
+    },
+    {
+      "name": "value",
+      "value": 11274.872357723578,
+      "isAdded": true
+    },
+    {
+      "name": "accruedInterest",
+      "isAdded": true
+    },
+    {
+      "name": "plBase",
+      "value": {
+        "SEK": -10935.88
+      },
+      "isAdded": true
+    },
+    {
+      "name": "todayPlBase",
+      "value": {
+        "SEK": -11274.872357723578
+      },
+      "isAdded": true
+    },
+    {
+      "name": "portfolioValueCorrection",
+      "value": 0,
+      "isAdded": true
+    },
+    {
+      "name": "breakEvenPrice",
+      "value": 263.3,
+      "isAdded": true
+    },
+    {
+      "name": "averageFxRate",
+      "value": 8.3028222,
+      "isAdded": true
+    },
+    {
+      "name": "realizedProductPl",
+      "value": -5.2145737,
+      "isAdded": true
+    },
+    {
+      "name": "realizedFxPl",
+      "value": 0,
+      "isAdded": true
+    },
+    {
+      "name": "todayRealizedProductPl",
+      "value": 0.0,
+      "isAdded": true
+    },
+    {
+      "name": "todayRealizedFxPl",
+      "value": 0,
+      "isAdded": true
+    }
+  ],
+  "4835051": [
+    {
+      "name": "id",
+      "value": "4835051",
+      "isAdded": true
+    },
+    {
+      "name": "positionType",
+      "value": "PRODUCT",
+      "isAdded": true
+    },
+    {
+      "name": "size",
+      "value": 18,
+      "isAdded": true
+    },
+    {
+      "name": "price",
+      "value": 66.98,
+      "isAdded": true
+    },
+    {
+      "name": "value",
+      "value": 10287.147804878048,
+      "isAdded": true
+    },
+    {
+      "name": "accruedInterest",
+      "isAdded": true
+    },
+    {
+      "name": "plBase",
+      "value": {
+        "SEK": -10760.57
+      },
+      "isAdded": true
+    },
+    {
+      "name": "todayPlBase",
+      "value": {
+        "SEK": -10287.147804878048
+      },
+      "isAdded": true
+    },
+    {
+      "name": "portfolioValueCorrection",
+      "value": 0,
+      "isAdded": true
+    },
+    {
+      "name": "breakEvenPrice",
+      "value": 72.0,
+      "isAdded": true
+    },
+    {
+      "name": "averageFxRate",
+      "value": 8.2985652,
+      "isAdded": true
+    },
+    {
+      "name": "realizedProductPl",
+      "value": -5.6295008,
+      "isAdded": true
+    },
+    {
+      "name": "realizedFxPl",
+      "value": 0,
+      "isAdded": true
+    },
+    {
+      "name": "todayRealizedProductPl",
+      "value": 0.0,
+      "isAdded": true
+    },
+    {
+      "name": "todayRealizedFxPl",
+      "value": 0,
+      "isAdded": true
+    }
+  ],
+  "18679200": [
+    {
+      "name": "id",
+      "value": "18679200",
+      "isAdded": true
+    },
+    {
+      "name": "positionType",
+      "value": "PRODUCT",
+      "isAdded": true
+    },
+    {
+      "name": "size",
+      "value": 1500,
+      "isAdded": true
+    },
+    {
+      "name": "price",
+      "value": 1.65,
+      "isAdded": true
+    },
+    {
+      "name": "value",
+      "value": 16225.838414634147,
+      "isAdded": true
+    },
+    {
+      "name": "accruedInterest",
+      "isAdded": true
+    },
+    {
+      "name": "plBase",
+      "value": {
+        "SEK": -16070.26
+      },
+      "isAdded": true
+    },
+    {
+      "name": "todayPlBase",
+      "value": {
+        "SEK": -16225.838414634147
+      },
+      "isAdded": true
+    },
+    {
+      "name": "portfolioValueCorrection",
+      "value": 0,
+      "isAdded": true
+    },
+    {
+      "name": "breakEvenPrice",
+      "value": 1.65,
+      "isAdded": true
+    },
+    {
+      "name": "averageFxRate",
+      "value": 6.4483533,
+      "isAdded": true
+    },
+    {
+      "name": "realizedProductPl",
+      "value": -110.5855825,
+      "isAdded": true
+    },
+    {
+      "name": "realizedFxPl",
+      "value": 0,
+      "isAdded": true
+    },
+    {
+      "name": "todayRealizedProductPl",
+      "value": 0.0,
+      "isAdded": true
+    },
+    {
+      "name": "todayRealizedFxPl",
+      "value": 0,
+      "isAdded": true
+    }
+  ],
+  "7484414": [
+    {
+      "name": "id",
+      "value": "7484414",
+      "isAdded": true
+    },
+    {
+      "name": "positionType",
+      "value": "PRODUCT",
+      "isAdded": true
+    },
+    {
+      "name": "size",
+      "value": 12,
+      "isAdded": true
+    },
+    {
+      "name": "price",
+      "value": 135.16,
+      "isAdded": true
+    },
+    {
+      "name": "value",
+      "value": 13839.06536585366,
+      "isAdded": true
+    },
+    {
+      "name": "accruedInterest",
+      "isAdded": true
+    },
+    {
+      "name": "plBase",
+      "value": {
+        "SEK": -16773.25
+      },
+      "isAdded": true
+    },
+    {
+      "name": "todayPlBase",
+      "value": {
+        "SEK": -13839.06536585366
+      },
+      "isAdded": true
+    },
+    {
+      "name": "portfolioValueCorrection",
+      "value": 0,
+      "isAdded": true
+    },
+    {
+      "name": "breakEvenPrice",
+      "value": 168.76666666666668,
+      "isAdded": true
+    },
+    {
+      "name": "averageFxRate",
+      "value": 8.27709581635394,
+      "isAdded": true
+    },
+    {
+      "name": "realizedProductPl",
+      "value": -10.47555272,
+      "isAdded": true
+    },
+    {
+      "name": "realizedFxPl",
+      "value": 0,
+      "isAdded": true
+    },
+    {
+      "name": "todayRealizedProductPl",
+      "value": 0.0,
+      "isAdded": true
+    },
+    {
+      "name": "todayRealizedFxPl",
+      "value": 0,
+      "isAdded": true
+    }
+  ],
+  "19017804": [
+    {
+      "name": "id",
+      "value": "19017804",
+      "isAdded": true
+    },
+    {
+      "name": "positionType",
+      "value": "PRODUCT",
+      "isAdded": true
+    },
+    {
+      "name": "size",
+      "value": 40,
+      "isAdded": true
+    },
+    {
+      "name": "price",
+      "value": 12.36,
+      "isAdded": true
+    },
+    {
+      "name": "value",
+      "value": 4218.478048780487,
+      "isAdded": true
+    },
+    {
+      "name": "accruedInterest",
+      "isAdded": true
+    },
+    {
+      "name": "plBase",
+      "value": {
+        "SEK": -4509.91
+      },
+      "isAdded": true
+    },
+    {
+      "name": "todayPlBase",
+      "value": {
+        "SEK": -4218.478048780487
+      },
+      "isAdded": true
+    },
+    {
+      "name": "portfolioValueCorrection",
+      "value": 0,
+      "isAdded": true
+    },
+    {
+      "name": "breakEvenPrice",
+      "value": 13.66,
+      "isAdded": true
+    },
+    {
+      "name": "averageFxRate",
+      "value": 8.2422186,
+      "isAdded": true
+    },
+    {
+      "name": "realizedProductPl",
+      "value": -6.36175696,
+      "isAdded": true
+    },
+    {
+      "name": "realizedFxPl",
+      "value": 0,
+      "isAdded": true
+    },
+    {
+      "name": "todayRealizedProductPl",
+      "value": 0.0,
+      "isAdded": true
+    },
+    {
+      "name": "todayRealizedFxPl",
+      "value": 0,
+      "isAdded": true
+    }
+  ],
+  "SEK": [
+    {
+      "name": "id",
+      "value": "SEK",
+      "isAdded": true
+    },
+    {
+      "name": "positionType",
+      "value": "CASH",
+      "isAdded": true
+    },
+    {
+      "name": "size",
+      "value": -23733.52,
+      "isAdded": true
+    },
+    {
+      "name": "price",
+      "value": 1,
+      "isAdded": true
+    },
+    {
+      "name": "value",
+      "value": -23733.52,
+      "isAdded": true
+    },
+    {
+      "name": "accruedInterest",
+      "isAdded": true
+    },
+    {
+      "name": "plBase",
+      "value": {
+        "SEK": 23733.52024705
+      },
+      "isAdded": true
+    },
+    {
+      "name": "todayPlBase",
+      "value": {
+        "SEK": 23733.52024705
+      },
+      "isAdded": true
+    },
+    {
+      "name": "portfolioValueCorrection",
+      "value": 0,
+      "isAdded": true
+    },
+    {
+      "name": "breakEvenPrice",
+      "value": 0,
+      "isAdded": true
+    },
+    {
+      "name": "averageFxRate",
+      "value": 1,
+      "isAdded": true
+    },
+    {
+      "name": "realizedProductPl",
+      "value": 0,
+      "isAdded": true
+    },
+    {
+      "name": "realizedFxPl",
+      "value": 0,
+      "isAdded": true
+    },
+    {
+      "name": "todayRealizedProductPl",
+      "value": 0,
+      "isAdded": true
+    },
+    {
+      "name": "todayRealizedFxPl",
+      "value": 0,
+      "isAdded": true
+    }
+  ],
+  "USD": [
+    {
+      "name": "id",
+      "value": "USD",
+      "isAdded": true
+    },
+    {
+      "name": "positionType",
+      "value": "CASH",
+      "isAdded": true
+    },
+    {
+      "name": "size",
+      "value": 0.0,
+      "isAdded": true
+    },
+    {
+      "name": "price",
+      "value": 1,
+      "isAdded": true
+    },
+    {
+      "name": "value",
+      "value": 0.0,
+      "isAdded": true
+    },
+    {
+      "name": "accruedInterest",
+      "isAdded": true
+    },
+    {
+      "name": "plBase",
+      "value": {
+        "SEK": 0.0
+      },
+      "isAdded": true
+    },
+    {
+      "name": "todayPlBase",
+      "value": {
+        "SEK": 0.0
+      },
+      "isAdded": true
+    },
+    {
+      "name": "portfolioValueCorrection",
+      "value": 0,
+      "isAdded": true
+    },
+    {
+      "name": "breakEvenPrice",
+      "value": 0,
+      "isAdded": true
+    },
+    {
+      "name": "averageFxRate",
+      "value": 1,
+      "isAdded": true
+    },
+    {
+      "name": "realizedProductPl",
+      "value": 0,
+      "isAdded": true
+    },
+    {
+      "name": "realizedFxPl",
+      "value": 0,
+      "isAdded": true
+    },
+    {
+      "name": "todayRealizedProductPl",
+      "value": 0,
+      "isAdded": true
+    },
+    {
+      "name": "todayRealizedFxPl",
+      "value": 0,
+      "isAdded": true
+    }
+  ],
+  "EUR": [
+    {
+      "name": "id",
+      "value": "EUR",
+      "isAdded": true
+    },
+    {
+      "name": "positionType",
+      "value": "CASH",
+      "isAdded": true
+    },
+    {
+      "name": "size",
+      "value": 0.0,
+      "isAdded": true
+    },
+    {
+      "name": "price",
+      "value": 1,
+      "isAdded": true
+    },
+    {
+      "name": "value",
+      "value": 0.0,
+      "isAdded": true
+    },
+    {
+      "name": "accruedInterest",
+      "isAdded": true
+    },
+    {
+      "name": "plBase",
+      "value": {
+        "SEK": -1.172408
+      },
+      "isAdded": true
+    },
+    {
+      "name": "todayPlBase",
+      "value": {
+        "SEK": 0.0
+      },
+      "isAdded": true
+    },
+    {
+      "name": "portfolioValueCorrection",
+      "value": 0,
+      "isAdded": true
+    },
+    {
+      "name": "breakEvenPrice",
+      "value": 0,
+      "isAdded": true
+    },
+    {
+      "name": "averageFxRate",
+      "value": 1,
+      "isAdded": true
+    },
+    {
+      "name": "realizedProductPl",
+      "value": 0,
+      "isAdded": true
+    },
+    {
+      "name": "realizedFxPl",
+      "value": 0,
+      "isAdded": true
+    },
+    {
+      "name": "todayRealizedProductPl",
+      "value": 0,
+      "isAdded": true
+    },
+    {
+      "name": "todayRealizedFxPl",
+      "value": 0,
+      "isAdded": true
+    }
+  ],
+  "AUD": [
+    {
+      "name": "id",
+      "value": "AUD",
+      "isAdded": true
+    },
+    {
+      "name": "positionType",
+      "value": "CASH",
+      "isAdded": true
+    },
+    {
+      "name": "size",
+      "value": 0.0,
+      "isAdded": true
+    },
+    {
+      "name": "price",
+      "value": 1,
+      "isAdded": true
+    },
+    {
+      "name": "value",
+      "value": 0.0,
+      "isAdded": true
+    },
+    {
+      "name": "accruedInterest",
+      "isAdded": true
+    },
+    {
+      "name": "plBase",
+      "value": {
+        "SEK": 0.0
+      },
+      "isAdded": true
+    },
+    {
+      "name": "todayPlBase",
+      "value": {
+        "SEK": 0.0
+      },
+      "isAdded": true
+    },
+    {
+      "name": "portfolioValueCorrection",
+      "value": 0,
+      "isAdded": true
+    },
+    {
+      "name": "breakEvenPrice",
+      "value": 0,
+      "isAdded": true
+    },
+    {
+      "name": "averageFxRate",
+      "value": 1,
+      "isAdded": true
+    },
+    {
+      "name": "realizedProductPl",
+      "value": 0,
+      "isAdded": true
+    },
+    {
+      "name": "realizedFxPl",
+      "value": 0,
+      "isAdded": true
+    },
+    {
+      "name": "todayRealizedProductPl",
+      "value": 0,
+      "isAdded": true
+    },
+    {
+      "name": "todayRealizedFxPl",
+      "value": 0,
+      "isAdded": true
+    }
+  ],
+  "FLATEX_SEK": [
+    {
+      "name": "id",
+      "value": "FLATEX_SEK",
+      "isAdded": true
+    },
+    {
+      "name": "positionType",
+      "value": "CASH",
+      "isAdded": true
+    },
+    {
+      "name": "size",
+      "value": 0.0,
+      "isAdded": true
+    },
+    {
+      "name": "price",
+      "value": 1,
+      "isAdded": true
+    },
+    {
+      "name": "value",
+      "value": 0.0,
+      "isAdded": true
+    },
+    {
+      "name": "accruedInterest",
+      "isAdded": true
+    },
+    {
+      "name": "plBase",
+      "value": {
+        "SEK": 0
+      },
+      "isAdded": true
+    },
+    {
+      "name": "todayPlBase",
+      "value": {
+        "SEK": 0
+      },
+      "isAdded": true
+    },
+    {
+      "name": "portfolioValueCorrection",
+      "value": 0,
+      "isAdded": true
+    },
+    {
+      "name": "breakEvenPrice",
+      "value": 0,
+      "isAdded": true
+    },
+    {
+      "name": "averageFxRate",
+      "value": 1,
+      "isAdded": true
+    },
+    {
+      "name": "realizedProductPl",
+      "value": 0,
+      "isAdded": true
+    },
+    {
+      "name": "realizedFxPl",
+      "value": 0,
+      "isAdded": true
+    },
+    {
+      "name": "todayRealizedProductPl",
+      "value": 0,
+      "isAdded": true
+    },
+    {
+      "name": "todayRealizedFxPl",
+      "value": 0,
+      "isAdded": true
+    }
+  ],
+  "FLATEX_USD": [
+    {
+      "name": "id",
+      "value": "FLATEX_USD",
+      "isAdded": true
+    },
+    {
+      "name": "positionType",
+      "value": "CASH",
+      "isAdded": true
+    },
+    {
+      "name": "size",
+      "value": 0.0,
+      "isAdded": true
+    },
+    {
+      "name": "price",
+      "value": 1,
+      "isAdded": true
+    },
+    {
+      "name": "value",
+      "value": 0.0,
+      "isAdded": true
+    },
+    {
+      "name": "accruedInterest",
+      "isAdded": true
+    },
+    {
+      "name": "plBase",
+      "value": {
+        "SEK": 0
+      },
+      "isAdded": true
+    },
+    {
+      "name": "todayPlBase",
+      "value": {
+        "SEK": 0
+      },
+      "isAdded": true
+    },
+    {
+      "name": "portfolioValueCorrection",
+      "value": 0,
+      "isAdded": true
+    },
+    {
+      "name": "breakEvenPrice",
+      "value": 0,
+      "isAdded": true
+    },
+    {
+      "name": "averageFxRate",
+      "value": 1,
+      "isAdded": true
+    },
+    {
+      "name": "realizedProductPl",
+      "value": 0,
+      "isAdded": true
+    },
+    {
+      "name": "realizedFxPl",
+      "value": 0,
+      "isAdded": true
+    },
+    {
+      "name": "todayRealizedProductPl",
+      "value": 0,
+      "isAdded": true
+    },
+    {
+      "name": "todayRealizedFxPl",
+      "value": 0,
+      "isAdded": true
+    }
+  ],
+  "FLATEX_EUR": [
+    {
+      "name": "id",
+      "value": "FLATEX_EUR",
+      "isAdded": true
+    },
+    {
+      "name": "positionType",
+      "value": "CASH",
+      "isAdded": true
+    },
+    {
+      "name": "size",
+      "value": 0.0,
+      "isAdded": true
+    },
+    {
+      "name": "price",
+      "value": 1,
+      "isAdded": true
+    },
+    {
+      "name": "value",
+      "value": 0.0,
+      "isAdded": true
+    },
+    {
+      "name": "accruedInterest",
+      "isAdded": true
+    },
+    {
+      "name": "plBase",
+      "value": {
+        "SEK": 0
+      },
+      "isAdded": true
+    },
+    {
+      "name": "todayPlBase",
+      "value": {
+        "SEK": 0
+      },
+      "isAdded": true
+    },
+    {
+      "name": "portfolioValueCorrection",
+      "value": 0,
+      "isAdded": true
+    },
+    {
+      "name": "breakEvenPrice",
+      "value": 0,
+      "isAdded": true
+    },
+    {
+      "name": "averageFxRate",
+      "value": 1,
+      "isAdded": true
+    },
+    {
+      "name": "realizedProductPl",
+      "value": 0,
+      "isAdded": true
+    },
+    {
+      "name": "realizedFxPl",
+      "value": 0,
+      "isAdded": true
+    },
+    {
+      "name": "todayRealizedProductPl",
+      "value": 0,
+      "isAdded": true
+    },
+    {
+      "name": "todayRealizedFxPl",
+      "value": 0,
+      "isAdded": true
+    }
+  ],
+  "FLATEX_AUD": [
+    {
+      "name": "id",
+      "value": "FLATEX_AUD",
+      "isAdded": true
+    },
+    {
+      "name": "positionType",
+      "value": "CASH",
+      "isAdded": true
+    },
+    {
+      "name": "size",
+      "value": 0.0,
+      "isAdded": true
+    },
+    {
+      "name": "price",
+      "value": 1,
+      "isAdded": true
+    },
+    {
+      "name": "value",
+      "value": 0.0,
+      "isAdded": true
+    },
+    {
+      "name": "accruedInterest",
+      "isAdded": true
+    },
+    {
+      "name": "plBase",
+      "value": {
+        "SEK": 0
+      },
+      "isAdded": true
+    },
+    {
+      "name": "todayPlBase",
+      "value": {
+        "SEK": 0
+      },
+      "isAdded": true
+    },
+    {
+      "name": "portfolioValueCorrection",
+      "value": 0,
+      "isAdded": true
+    },
+    {
+      "name": "breakEvenPrice",
+      "value": 0,
+      "isAdded": true
+    },
+    {
+      "name": "averageFxRate",
+      "value": 1,
+      "isAdded": true
+    },
+    {
+      "name": "realizedProductPl",
+      "value": 0,
+      "isAdded": true
+    },
+    {
+      "name": "realizedFxPl",
+      "value": 0,
+      "isAdded": true
+    },
+    {
+      "name": "todayRealizedProductPl",
+      "value": 0,
+      "isAdded": true
+    },
+    {
+      "name": "todayRealizedFxPl",
+      "value": 0,
+      "isAdded": true
+    }
+  ]
+}
