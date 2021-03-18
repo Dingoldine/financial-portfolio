@@ -1,15 +1,13 @@
-from celery import Celery, chain, chord
+from celery import Celery, chain, chord, group
 from celery.utils.log import get_task_logger
 from celery.schedules import crontab
-from scrapers import avanza_scraper, nasdaq_omx_scraper
-from database import Database
+from scrapers import avanza_scraper, nasdaq_omx_scraper, degiro_scraper
 from portfolio import Portfolio
 from database import Database
 import configparser
 import time, sys
 Config = configparser.ConfigParser()
 Config.read('./config.ini')
-
 
 if (Config["NETWORK-MODE"]["localhost"] == True):
     broker = f'pyamqp://{Config["CELERY"]["RABBITMQ_DEFAULT_USER"]}:{Config["CELERY"]["RABBITMQ_DEFAULT_PASS"]}@localhost'
@@ -18,11 +16,21 @@ else:
 
 # Create the celery app and get the logger
 try:
-    celery_app = Celery('tasks', broker=broker)
+    celery_app = Celery('portfolio_worker', broker=broker)
     celery_app.conf.update(
         accept_content=['json', 'pickle', 'application/x-python-serialize'],
         timezone='Europe/Stockholm',
-        enable_utc=True
+        enable_utc=True,
+        result_backend='redis://redis:6379/0',
+        task_routes = {
+            'portfolio_worker.tasks.updatePortfolio': {
+                'queue': 'default',
+                'routing_key': 'default',
+            },
+        },
+        task_default_queue = 'default',
+        task_default_exchange_type = 'direct',
+        task_default_routing_key = 'default'
     )
 except:
     print("Could not connect to broker")
@@ -60,13 +68,17 @@ def updateDB(self, Portfolio):
     finally:
         db.disconnect()
 
-@celery_app.task(bind=True, serializer='pickle')
+@celery_app.task(bind=True)
 def scrapeAvanza(self):
-    logger.info("LOGGING EXTRA INFO PARAMETER: %s", )
+    logger.info("LOGGING TASK SCRAPING AVANZA: %s", )
     return avanza_scraper.scrape()
 
+@celery_app.task(bind=True)
+def scrapeDegiro(self):
+    logger.info("LOGGING TASK SCRAPING DEGIRO: %s", )
+    return degiro_scraper.scrapeTEST()
 
-@celery_app.task(bind=True, serializer='pickle')
+@celery_app.task(bind=True)
 def constructPortfolio(self, parameter_list):
     logger.info(parameter_list)
     (dataframes, fundInfo) = parameter_list
@@ -75,13 +87,13 @@ def constructPortfolio(self, parameter_list):
     P.fundsBreakdown()
     return P
 
+
 @celery_app.task(bind=True)
 def updatePortfolio(self):
     try:
-        
-        res = chain(scrapeAvanza.s(), constructPortfolio.s(),updateDB.s())()
+        res = chain(group([scrapeAvanza.s(),scrapeDegiro.s()]), chain(constructPortfolio.s(),updateDB.s()))()
         return res
-        #logger.info("Scraping complete:, response: %s" % (res))
+        # logger.info("Scraping complete:, response: %s" % (res))
         # time.sleep(1)
         # self.update_state(state="PROGRESS", meta={'progress': 50})
         # time.sleep(1)

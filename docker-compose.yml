@@ -27,17 +27,23 @@ services:
         target: /app/database.py
     depends_on:
       - postgres
-      - rabbit
+      - worker
   worker:
-    build: ./backend
+    build: ./worker
     environment:
       - C_FORCE_ROOT=true
-    entrypoint: celery -A celery_worker worker -c 2 --loglevel=info
+    entrypoint: celery -A portfolio_worker worker -c 2 --loglevel=info -Q default,celery
     depends_on:
       - rabbit
+      - redis
   rabbit:
     image: rabbitmq:3.8.9
     hostname: "rabbit"
     env_file: ./env/rabbit.env
     expose:
       - 5672
+  redis:
+    image: redis:6.2.1
+    hostname: redis
+    expose:
+      - 6379

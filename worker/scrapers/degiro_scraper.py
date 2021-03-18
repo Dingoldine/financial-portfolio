@@ -3,13 +3,12 @@ import requests, json
 from requests.models import Response
 from requests.sessions import Session
 from requests.exceptions import HTTPError
-import configparser
+import configparser, os
 
 BASE_URL =  "https://trader.degiro.nl"
 Config = configparser.ConfigParser()
 
-Config.read('./config.ini')
-
+Config.read('config.ini')
 
 USERNAME = Config["DEGIRO"]["username"]
 PASSWORD = Config["DEGIRO"]["password"]
@@ -66,7 +65,7 @@ def parsePortfolio(data: Dict):
 
     return list(d.keys()), positionsDict
 
-def scrape():
+def scrapeLIVE():
     with requests.Session() as session:
         request_headers = {
             'Host': 'trader.degiro.nl',
@@ -135,8 +134,8 @@ def mergeDicts(d1: Dict, d2: Dict):
     return d3
 
 
-def test():
-    with open("portfolioResponse.json", "r") as file:
+def scrapeTEST():
+    with open(os.path.join(os.getcwd(), 'portfolioResponse.json'), "r") as file:
         portfolioList = eval(file.read().replace('true', 'True').replace('false', 'False')).get("portfolio").get("value")
         positionsDict = {}
         interestingFields = ["value", "size", "price", "breakEvenPrice"]
@@ -151,10 +150,7 @@ def test():
 
 
 
-        with open("requestResponse.txt", 'r') as secondFile:
+        with open(os.path.join(os.getcwd(), 'requestResponse.txt'), 'r') as secondFile:
             stockHoldings = eval(secondFile.read().replace('true', 'True').replace('false', 'False')).get('data')
             return mergeDicts(stockHoldings, positionsDict)
 
-if __name__ == '__main__':
-    #scrape()
-    test()

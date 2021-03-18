@@ -1,14 +1,19 @@
 from fastapi import FastAPI, Request, Response, Depends, BackgroundTasks 
 from fastapi.middleware.cors import CORSMiddleware
-import constants
 from sqlalchemy.orm import Session
 from database import Database
-from helpermodules import valuation
 import time
 from multiprocessing import Process
-import time
-from celery_worker import updatePortfolio
+import time, configparser
+from celery import Celery
 
+Config = configparser.ConfigParser()
+Config.read('./config.ini')
+
+if (Config["NETWORK-MODE"]["localhost"] == True):
+    broker = f'pyamqp://{Config["CELERY"]["RABBITMQ_DEFAULT_USER"]}:{Config["CELERY"]["RABBITMQ_DEFAULT_PASS"]}@localhost'
+else:
+    broker = f'pyamqp://{Config["CELERY"]["RABBITMQ_DEFAULT_USER"]}:{Config["CELERY"]["RABBITMQ_DEFAULT_PASS"]}@rabbit'
 
 db = None
 P = None
@@ -109,7 +114,14 @@ def doRefresh(dbSession: Session = Depends(get_db)):
         db.createTableFromDF(P.getFunds(), "funds")
     ])
      """
-    res = updatePortfolio.delay()
+    celeryapp = Celery('portfolio_worker', broker=broker)
+    #celeryapp.config_from_object('config.celeryconfig')
+
+
+    r = celeryapp.send_task('portfolio_worker.updatePortfolio', args=())
+    print(r.id)
+
+    #res = updatePortfolio.delay()
     #print(res.status) # 'SUCCESS'
     #print(res.id) # '432890aa-4f02-437d-aaca-1999b70efe8d'
     return {"message": "update request received"}

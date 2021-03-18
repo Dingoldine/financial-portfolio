@@ -7,7 +7,7 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import NoSuchElementException, TimeoutException
 from helpermodules import Excel, Utils
-from scrapers._scraping_functions import waitforload, clickElement 
+from scrapers._scraping_functions import waitforload, clickElement
 import constants
 
 
@@ -260,7 +260,7 @@ def _get_portfolio(browser):
             # store page content
             fundDictionary.update({instrument: str(html)})
 
-            #Utils.saveTxtFile(str(html.prettify()), instrument)
+            Utils.saveTxtFile(str(html.prettify()), instrument)
 
         #go back
         browser.execute_script(f'window.history.go(-{len(fundDictionary)})')
@@ -288,7 +288,8 @@ def _loginToAvanza(url, payload):
     opt.add_argument('-headless')
     opt.profile = fp
     #opt.binary = "/var/lib/flatpak/app/org.mozilla.Firefox/x86_64/stable/e3a974bd5b0a8a360d611a1d78405c88a18af5bfe9cd89f60af697723e439d98/export/bin/org.mozilla.Firefox"
-    browser = webdriver.Firefox(options=opt, service_log_path=constants.GECKO_LOG_PATH, executable_path="/home/philip/projects/avanza-scraper/backend/geckodriver/geckodriver")
+    #executable_path="/home/philip/projects/avanza-scraper/backend/geckodriver/geckodriver"
+    browser = webdriver.Firefox(options=opt, service_log_path=constants.GECKO_LOG_PATH, executable_path=constants.GECKO_EXECUTABLE_PATH)
     # poll for elements for --  seconds max, before shutdown
     browser.implicitly_wait(0)
     wait = WebDriverWait(browser, 35)
@@ -338,6 +339,9 @@ def _loginToAvanza(url, payload):
     return browser
 
 
+def scrapeTEST():
+    time.sleep(16)
+    return pd.DataFrame(columns=['Asset', 'Shares', 'Purchase', 'Market Value', 'Change', 'Profit']).to_json()
 def scrape():
 
     login_url = 'https://www.avanza.se/start/startsidan.html(right-overlay:login/login-overlay)'
@@ -347,13 +351,13 @@ def scrape():
     }
 
     # login and get new data
-    #browser = _loginToAvanza(login_url, payload)
+    browser = _loginToAvanza(login_url, payload)
 
-    #html, fund_details_dict = _get_portfolio(browser)
+    html, fund_details_dict = _get_portfolio(browser)
 
     # for reuse
-    #Utils.saveTxtFile(html, 'htmlAvanza') 
-    html = Utils.readTxtFile('htmlAvanza')
+    Utils.saveTxtFile(html, 'htmlAvanza') 
+    #html = Utils.readTxtFile('htmlAvanza')
 
     dataframes = _parseHTML(html)
 
