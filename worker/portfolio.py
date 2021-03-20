@@ -14,7 +14,7 @@ from requests.exceptions import HTTPError
 # from pprint import pprint
 
 import constants
-
+from io import StringIO 
 from bs4 import BeautifulSoup
 import time
 from collections import OrderedDict
@@ -67,23 +67,23 @@ class Portfolio:
     target_bonds = 0.1 
     target_alternative = 0
 
-    def __init__(self, dataframes, funds_info):
+    def __init__(self, avanza_holdings, degiro_holdings):
         assert(self.target_bonds + self.target_developing_markets + self.target_global + \
             self.target_nordic + self.target_alternative + self.target_eu == 1) # make sure fund allocation rules make sense
         
         # for pandas version >= 0.21.0
-        df_map = pd.read_excel(f'{constants.excelSaveLocation}/portfolio.xlsx', sheet_name=None)
-        self.stocks = df_map.get("Stocks", None)
-        funds = df_map.get("Funds", None)
-        etfs = df_map.get("ETFs", None)
+        #avanza_holdings = pd.read_excel(f'{constants.excelSaveLocation}/portfolio.xlsx', sheet_name=None)
+        self.stocks = pd.read_json(StringIO(avanza_holdings.get("Stocks", pd.DataFrame(columns=[]).to_json())), orient='split')
+        funds = pd.read_json(StringIO(avanza_holdings.get("Funds", pd.DataFrame(columns=[]).to_json())), orient='split')
+        etfs = pd.read_json(StringIO(avanza_holdings.get("ETFs", pd.DataFrame(columns=[]).to_json())),orient='split')
         # merge ETFs and funds
         frames = [funds, etfs]
         concat_funds = pd.concat(frames, keys=['Funds', 'ETFs'])
         self.funds = concat_funds
-        self.certificates = df_map.get("Certificates", None)
-        self.summary = df_map.get("Potfolio Summary", None)
+        self.certificates = pd.read_json(StringIO(avanza_holdings.get("Certificates",  pd.DataFrame(columns=[]).to_json())), orient='index')
+        self.summary = pd.read_json(StringIO(avanza_holdings.get("Potfolio Summary",  pd.DataFrame(columns=[]).to_json())), orient='index')
         
-        if self.certificates is not None:
+        if not self.certificates.empty:
             self.cert_value = self.certificates['Market Value'].sum()
             self.certificates['Weight'] = self.certificates['Market Value'] /  self.cert_value
         else:
@@ -129,7 +129,7 @@ class Portfolio:
         html = Utils.readTxtFile(instrument)
         print(instrument)
         soup = BeautifulSoup(html, 'lxml')
-        fee_tag = soup.find("h2", attrs= {'data-e2e': 'fon-guide-total-fee'})
+        fee_tag = soup.find("h3", attrs= {'data-e2e': 'fon-guide-total-fee'})
 
         if (fee_tag):
             fee = fee_tag.text.strip()
@@ -527,9 +527,8 @@ class Portfolio:
         print("#################### STOCKS #####################")
         wb =  Utils.readExcel('indname.xls')
         companyExcelList = wb.sheet_by_name('Industry sorted (Global)')
-
         ## complex string lookup, MIGHT NEED ATTENTION LATER
-        for asset in self.stocks['Asset']:
+        for asset in self.stocks['Asset']  :
             matches = {}
             # Treat this complex case, only one that does not get market correct currently, NEED IMPROVEMENT LATER
             if (asset == 'SCA B'):
@@ -593,7 +592,7 @@ class Portfolio:
                         self.stocks.loc[self.stocks['Asset'] == asset, f'EPS ({latestYear})'] = latestEps
             except FileNotFoundError:
                 pass
-                
+             
             # industry betas
             indDamodaran = self.stocks.loc[self.stocks['Asset'] == asset, 'Industry Group (Damodaran)'].values[0]
             print(indDamodaran)

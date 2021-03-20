@@ -22,7 +22,7 @@
           <tbody>
             {% for fund in fund_data %}
             <tr>
-              {% for col in stock %}
+              {% for col in fund %}
               <td nowrap> {{col}} </td>
               {% endfor %}
             </tr>
@@ -31,7 +31,7 @@
         </table>
       </div>
     </div>
-  </div>
+</div>
 
 <script type="text/javascript">
   const data = {{fund_data | tojson}}; 

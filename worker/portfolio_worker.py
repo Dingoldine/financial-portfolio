@@ -1,9 +1,11 @@
-from celery import Celery, chain, chord, group
+from celery import Celery, chain, chord, group 
 from celery.utils.log import get_task_logger
 from celery.schedules import crontab
 from scrapers import avanza_scraper, nasdaq_omx_scraper, degiro_scraper
 from portfolio import Portfolio
 from database import Database
+import celeryconfig
+from celery.signals import worker_process_init, worker_process_shutdown
 import configparser
 import time, sys
 Config = configparser.ConfigParser()
@@ -17,24 +19,48 @@ else:
 # Create the celery app and get the logger
 try:
     celery_app = Celery('portfolio_worker', broker=broker)
-    celery_app.conf.update(
-        accept_content=['json', 'pickle', 'application/x-python-serialize'],
-        timezone='Europe/Stockholm',
-        enable_utc=True,
-        result_backend='redis://redis:6379/0',
-        task_routes = {
-            'portfolio_worker.tasks.updatePortfolio': {
-                'queue': 'default',
-                'routing_key': 'default',
-            },
-        },
-        task_default_queue = 'default',
-        task_default_exchange_type = 'direct',
-        task_default_routing_key = 'default'
-    )
+    celery_app.config_from_object(celeryconfig)
+    # .conf.update(
+    #     accept_content=['json', 'json', 'application/x-python-serialize'],
+    #     timezone='Europe/Stockholm',
+    #     enable_utc=True,
+    #     task_serializer="json",
+    #     result_accept_content=['json', 'json', 'application/x-python-serialize'],
+    #     result_backend='redis://redis:6379/0',
+    #     task_routes = {
+    #         'portfolio_worker.tasks.updatePortfolio': {
+    #             'queue': 'default',
+    #             'routing_key': 'default',
+    #         },
+    #     },
+    #     task_default_queue = 'default',
+    #     task_default_exchange_type = 'direct',
+    #     task_default_routing_key = 'default'
+    # )
 except:
     print("Could not connect to broker")
     sys.exit(-1)
+
+
+db = None
+
+@worker_process_init.connect
+def init_worker(**kwargs):
+    global db
+    try:
+        print('Initializing database connection for worker.')
+        db = Database()
+        db.connect()
+    except Exception:
+        raise
+
+@worker_process_shutdown.connect
+def shutdown_worker(**kwargs):
+    global db
+    if db:
+        print('Closing database connectionn for worker.')
+        db.disconnect()
+
 
 logger = get_task_logger(__name__)
 
@@ -53,45 +79,55 @@ def add(x, y):
     logger.info("Adding %s + %s, res: %s" % (x, y, res))
     return res
 
-@celery_app.task(bind=True, serializer='pickle', ignore_result=True)
-def updateDB(self, Portfolio):
-    logger.info(Portfolio)
+@celery_app.task(bind=True, serializer='json')
+def updateDB(self, portfolio):
     logger.info("----Updating db----")
+    logger.info(portfolio)
     try:
-        db = Database()
-        db.connect()
-        db.createTableFromDF(Portfolio.getStocks(), "stocks")
-        db.createTableFromDF(Portfolio.getFunds(), "funds")
+        db.createTableFromDF(portfolio.get('stocks'), "stocks")
+        db.createTableFromDF(portfolio.get('funds'), "funds")
         logger.info("----Updating db completed successfully----")
+        return {}
     except Exception:
         raise
-    finally:
-        db.disconnect()
 
-@celery_app.task(bind=True)
+@celery_app.task(bind=True, serializer='json')
 def scrapeAvanza(self):
     logger.info("LOGGING TASK SCRAPING AVANZA: %s", )
-    return avanza_scraper.scrape()
+    return avanza_scraper.scrapeTEST()
 
-@celery_app.task(bind=True)
-def scrapeDegiro(self):
+@celery_app.task(bind=True, serializer='json')
+def scrapeDegiro(self, something=""):
     logger.info("LOGGING TASK SCRAPING DEGIRO: %s", )
     return degiro_scraper.scrapeTEST()
 
-@celery_app.task(bind=True)
+@celery_app.task(bind=True, serializer="json")
 def constructPortfolio(self, parameter_list):
-    logger.info(parameter_list)
-    (dataframes, fundInfo) = parameter_list
-    P = Portfolio(dataframes, fundInfo)
+    #logger.info(parameter_list)
+    (avanzaHoldings, degiroHoldings) = parameter_list
+
+    P = Portfolio(avanzaHoldings, degiroHoldings)
     P.stocksBreakdown()
     P.fundsBreakdown()
-    return P
+    return {
+        'stocks': P.getStocks().to_json(orient='split'),
+        'funds': P.getFunds().to_json(orient='split')
+    }
 
 
-@celery_app.task(bind=True)
+@celery_app.task(bind=True, serializer='json')
 def updatePortfolio(self):
     try:
-        res = chain(group([scrapeAvanza.s(),scrapeDegiro.s()]), chain(constructPortfolio.s(),updateDB.s()))()
+        workflow = chain([
+            chord([scrapeAvanza.s(),scrapeDegiro.s()], constructPortfolio.s()),
+            updateDB.s()
+        ])
+
+        res = workflow.apply_async()
+        #workflow = chain(group([scrapeAvanza.s(),scrapeDegiro.s()]), constructPortfolio.s(), updateDB().s)
+        ##res = chord(header)(updateDB.s())
+        #res = chain(scrapeAvanza.s(),scrapeDegiro.s(), constructPortfolio.s(), updateDB.s())()
+        
         return res
         # logger.info("Scraping complete:, response: %s" % (res))
         # time.sleep(1)

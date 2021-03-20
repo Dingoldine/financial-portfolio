@@ -15,15 +15,15 @@ def printDf(df):
 def saveTxtFile(text, filename):
     """Given a filename saves the file the file as a .txt file."""
 
-    with open(f'{constants.txtSaveLocation}/{filename}.txt', 'w') as f:
+    with open(f'{constants.txtSaveLocation}/{filename.replace(" ", "")}.txt'.encode('ascii',errors='ignore').decode(), 'w') as f:
         f.write(text)
 
 def readTxtFile(filename):
     """Given a filename returns the content as a String."""
     
-    with open(f'{constants.txtSaveLocation}/{filename}.txt','r') as f:
-        html = f.read()
-    return html
+    with open(f'{constants.txtSaveLocation}/{filename.replace(" ", "")}.txt'.encode('ascii',errors='ignore').decode(),'r') as f:
+        content = f.read()
+    return content
 
 
 def readExcel(filename):

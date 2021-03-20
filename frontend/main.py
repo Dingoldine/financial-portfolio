@@ -1,6 +1,7 @@
 from fastapi import FastAPI, Request, Response, HTTPException
 import requests
 import configparser
+import json
 from fastapi.responses import HTMLResponse, FileResponse, RedirectResponse
 #import scrapers.avanza_scraper as avanza_scraper
 from fastapi.staticfiles import StaticFiles
@@ -56,6 +57,7 @@ async def getStocks(request: Request, response_class=HTMLResponse):
     if (res.status_code) == 200:
         content = res.json()
         stock_data = content.get("data")
+        print(json.dumps(stock_data, indent=2))
         stock_columns = content.get("columns")
         return templates.TemplateResponse("/stock_page/stocks.html", {"request": request, "stock_data": stock_data, "stock_columns": stock_columns})
     else:
@@ -68,6 +70,7 @@ async def getFunds(request: Request, response_class=HTMLResponse):
     if (res.status_code) == 200:
         content = res.json()
         fund_data = content.get("data")
+        print(json.dumps(fund_data, indent=2))
         fund_columns = content.get("columns")
         return templates.TemplateResponse("/funds_page/funds.html", {"request": request, "fund_data": fund_data, "fund_columns": fund_columns})
     else:

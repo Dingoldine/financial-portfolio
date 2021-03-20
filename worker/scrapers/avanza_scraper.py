@@ -77,7 +77,7 @@ def _parseHTML(data):
 
         tables = soup.find_all("table", {"class": "tableV2"})
         
-        dataframes = []
+        dataframes = {}
         # we only care about the first 4 tables
         for table in tables[:4]:
             captionTag = table.find('h2')
@@ -90,7 +90,7 @@ def _parseHTML(data):
                 #Utils.printDf(df)f
                 if(err):
                     continue
-                dataframes.append(df)
+                dataframes.update({df.name: df.to_json(orient='split')})
         
         return dataframes
 
@@ -117,8 +117,8 @@ def _buildDataframe(headers, rows, caption):
         df.name = "Stocks"
         df.drop(unnecessary_columns, axis=1, inplace=True)
         df.columns = new_column_names
-        leftMostCol = df.columns.values[0]
-        df.set_index(leftMostCol, inplace=True) # Turn this column to index
+        #leftMostCol = df.columns.values[0]
+        #df.set_index(leftMostCol, inplace=True) # Turn this column to index
         Utils.printDf(df)
         return(df)
 
@@ -139,8 +139,8 @@ def _buildDataframe(headers, rows, caption):
         df.name = "Funds"
         df.drop(unnecessary_columns, axis=1, inplace=True)
         df.columns = new_column_names
-        leftMostCol = df.columns.values[0]
-        df.set_index(leftMostCol, inplace=True) # Turn this column to index
+        #leftMostCol = df.columns.values[0]
+        #df.set_index(leftMostCol, inplace=True) # Turn this column to index
         return(df)
 
     def etfs(headers, rows):
@@ -158,8 +158,8 @@ def _buildDataframe(headers, rows, caption):
         df.name = "ETFs"
         df.drop(unnecessary_columns, axis=1, inplace=True)
         df.columns = new_column_names
-        leftMostCol = df.columns.values[0]
-        df.set_index(leftMostCol, inplace=True) # Turn this column to index
+        #leftMostCol = df.columns.values[0]
+        #df.set_index(leftMostCol, inplace=True) # Turn this column to index
         return(df)
 
     def cert(headers, rows):
@@ -175,8 +175,8 @@ def _buildDataframe(headers, rows, caption):
         df.name = "Certificates"
         df.drop(unnecessary_columns, axis=1, inplace=True)
         df.columns = new_column_names
-        leftMostCol = df.columns.values[0]
-        df.set_index(leftMostCol, inplace=True) # Turn this column to index
+        #leftMostCol = df.columns.values[0]
+        #df.set_index(leftMostCol, inplace=True) # Turn this column to index
         return(df)
 
     def summary(headers, rows):
@@ -340,8 +340,12 @@ def _loginToAvanza(url, payload):
 
 
 def scrapeTEST():
-    time.sleep(16)
-    return pd.DataFrame(columns=['Asset', 'Shares', 'Purchase', 'Market Value', 'Change', 'Profit']).to_json()
+    #time.sleep(10)
+    html = Utils.readTxtFile('htmlAvanza')
+
+    dataframes = _parseHTML(html)
+    print(dataframes)
+    return dataframes
 def scrape():
 
     login_url = 'https://www.avanza.se/start/startsidan.html(right-overlay:login/login-overlay)'
@@ -357,11 +361,9 @@ def scrape():
 
     # for reuse
     Utils.saveTxtFile(html, 'htmlAvanza') 
-    #html = Utils.readTxtFile('htmlAvanza')
 
     dataframes = _parseHTML(html)
 
     # Perhaps send to Cloud object storage
     #Excel.create(dataframes, 'portfolio', 1)
-    fund_details_dict = {}
     return dataframes, fund_details_dict
