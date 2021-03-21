@@ -4,6 +4,8 @@ from requests.models import Response
 from requests.sessions import Session
 from requests.exceptions import HTTPError
 import configparser, os
+import pandas as pd
+from io import StringIO
 
 BASE_URL =  "https://trader.degiro.nl"
 Config = configparser.ConfigParser()
@@ -120,6 +122,7 @@ def scrapeLIVE():
         holdings = parseHoldings(response_data, portfolio_dict)
         print(json.dumps(holdings, indent=2))
 
+
 def mergeDicts(d1: Dict, d2: Dict):
     d3 = {}
     for k in set(d1.keys()).union(d2.keys()):
@@ -134,11 +137,12 @@ def mergeDicts(d1: Dict, d2: Dict):
     return d3
 
 
+
 def scrapeTEST():
     with open(os.path.join(os.getcwd(), 'portfolioResponse.json'), "r") as file:
         portfolioList = eval(file.read().replace('true', 'True').replace('false', 'False')).get("portfolio").get("value")
         positionsDict = {}
-        interestingFields = ["value", "size", "price", "breakEvenPrice"]
+        interestingFields = ["id","value", "size", "price", "breakEvenPrice"]
         for position in portfolioList:
             fieldDict = {}
             for field in position.get("value"):
@@ -154,3 +158,6 @@ def scrapeTEST():
             stockHoldings = eval(secondFile.read().replace('true', 'True').replace('false', 'False')).get('data')
             return mergeDicts(stockHoldings, positionsDict)
 
+       # convertToPandasFormat(mergedDict)
+
+scrapeTEST()

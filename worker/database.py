@@ -111,15 +111,15 @@ class Database:
         # drop manually because of bug 
 
         # see locks query
-        #self.query('select pid, usename, pg_blocking_pids(pid) as blocked_by, query as blocked_query from pg_stat_activity where cardinality(pg_blocking_pids(pid)) > 0;')
+        self.query('select pid, usename, pg_blocking_pids(pid) as blocked_by, query as blocked_query from pg_stat_activity where cardinality(pg_blocking_pids(pid)) > 0;')
         # clear locks query
-        #self.query('SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE pid <> pg_backend_pid();')
-        #self.query('DROP TABLE IF EXISTS stocks CASCADE;')
-        #self.commit()
+        self.query('SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE pid <> pg_backend_pid();')
+        self.query(f'DROP TABLE IF EXISTS {tableName} CASCADE;')
+        self.commit()
 
 
-        df=pd.read_json(StringIO(json), orient='split')
-
+        df=pd.read_json(StringIO(json), orient='index')
+        print(df.head(5))
         #df = df.copy()
         df.columns = df.columns.str.replace(' ', '_').str.lower().str.replace('(', '').str.replace(')', '')
         df.reset_index(inplace=True)
@@ -193,12 +193,21 @@ class Database:
         return result
 
     def fetch_stocks(self):
-        self.cursor.execute("SELECT * FROM stocks")
-        return self.cursor.fetchall()
-
+        try:
+            self.cursor.execute("SELECT * FROM stocks")
+            return self.cursor.fetchall()
+        except psycopg2.InterfaceError as e:
+            print(e)
+            self.disconnect()
+            self.connect()
     def fetch_funds(self):
-        self.cursor.execute("SELECT * FROM funds")
-        return self.cursor.fetchall()
+        try:
+            self.cursor.execute("SELECT * FROM funds")
+            return self.cursor.fetchall()
+        except psycopg2.InterfaceError as e:
+            print(e)
+            self.disconnect()
+            self.connect()
 
     def commit(self):
         print("COMMITING: ")

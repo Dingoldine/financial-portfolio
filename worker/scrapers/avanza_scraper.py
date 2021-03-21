@@ -90,7 +90,7 @@ def _parseHTML(data):
                 #Utils.printDf(df)f
                 if(err):
                     continue
-                dataframes.update({df.name: df.to_json(orient='split')})
+                dataframes.update({df.name: df.to_json(orient='index')})
         
         return dataframes
 

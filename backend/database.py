@@ -1,8 +1,11 @@
-import configparser, psycopg2, sys
+import configparser, psycopg2, sys, time
+
 #from io import StringIO
-#import pandas as pd
+import pandas as pd
+from io import StringIO
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy import pool, create_engine, Integer, String, Numeric, Float, Boolean, DateTime, BigInteger
+
 #import numpy as np
 class Database:
 
@@ -17,28 +20,33 @@ class Database:
 
 
     def connect(self):
-        try:
-            connection = psycopg2.connect(**self.dbConfig)
+        for attempt in range(10):
+            try:
+                connection = psycopg2.connect(**self.dbConfig)
 
-            cursor = connection.cursor()
-            # Print PostgreSQL Connection properties
-            print ( connection.get_dsn_parameters(),"\n")
+                cursor = connection.cursor()
+                # Print PostgreSQL Connection properties
+                print ( connection.get_dsn_parameters(),"\n")
 
-            # Print PostgreSQL version
-            cursor.execute("SELECT version();")
-            record = cursor.fetchone()
-            print("You are connected to - ", record,"\n")
+                # Print PostgreSQL version
+                cursor.execute("SELECT version();")
+                record = cursor.fetchone()
+                print("You are connected to - ", record,"\n")
 
-            self.connection = connection
-            self.cursor = cursor
-            
-            ## SQLALCHEMY ENGINE-
-            self.engine = create_engine('postgresql+psycopg2://{}:{}@{}/{}'.format(self.dbConfig["user"], self.dbConfig["password"],self.dbConfig["host"], self.dbConfig["database"]), echo=False)
-
-        except (Exception, psycopg2.Error) as error :
-            print ("Error while connecting to PostgreSQL", error)
-            sys.exit(-1)
-
+                self.connection = connection
+                self.cursor = cursor
+                
+                ## SQLALCHEMY ENGINE-
+                self.engine = create_engine('postgresql+psycopg2://{}:{}@{}/{}'.format(self.dbConfig["user"], self.dbConfig["password"],self.dbConfig["host"], self.dbConfig["database"]), echo=True, pool_pre_ping=True)
+            except (Exception, psycopg2.Error) as error :
+                print("Error while connecting to PostgreSQL", error)
+                print("Retrying in: ", 1 + attempt * attempt)
+                time.sleep(1 + attempt * attempt)
+                continue
+            else:
+                break
+        else:
+            print("Error while connecting to PostgreSQL", error)
     def getLocalSession(self):
         SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=self.engine)
         return SessionLocal()
@@ -98,14 +106,25 @@ class Database:
         self.create()
 
     
-    
-    async def createTableFromDF(self, df, tableName):
+    # HAS PROVEN TO CAUSE LOCKS ON DATABASE IF TABLE ALREADY EXISTS
+    def createTableFromDF(self, json, tableName):
+        # drop manually because of bug 
 
-        indexName = 'unnamed' if df.index.name is None else df.index.name.lower()
-        df = df.copy()
+        # see locks query
+        self.query('select pid, usename, pg_blocking_pids(pid) as blocked_by, query as blocked_query from pg_stat_activity where cardinality(pg_blocking_pids(pid)) > 0;')
+        # clear locks query
+        self.query('SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE pid <> pg_backend_pid();')
+        self.query(f'DROP TABLE IF EXISTS {tableName} CASCADE;')
+        self.commit()
+
+
+        df=pd.read_json(StringIO(json), orient='index')
+        print(df.head(5))
+        #df = df.copy()
         df.columns = df.columns.str.replace(' ', '_').str.lower().str.replace('(', '').str.replace(')', '')
         df.reset_index(inplace=True)
-        df.rename(columns={ df.columns[0]: indexName }, inplace=True)
+
+        df.rename(columns={ df.columns[0]: 'asset' }, inplace=True)
 
         def changeType(x):
             switcher = {
@@ -116,11 +135,12 @@ class Database:
                 'M': DateTime()
             }
             return switcher.get(x.kind)
-
+ 
         dTypeDict = dict(df.dtypes.apply(changeType))
-        print(dTypeDict)
+
         try:
-            await df.to_sql(tableName, con=self.engine, index=False, dtype=dTypeDict, if_exists='replace')
+            with self.engine.connect() as connection:
+                df.to_sql(tableName, con=connection, index=False, dtype=dTypeDict, if_exists='replace')
             
             # print(self.engine.execute(f'SELECT * FROM {tableName}').fetchall())
         
@@ -157,9 +177,12 @@ class Database:
             print ("Error while disconnecting from PostgreSQL", error)
             
     def query(self, query):
-        print("executing: ", query)
-        self.cursor.execute(query)
-
+        try:  
+            print("executing: ", query)
+            self.cursor.execute(query)
+            print(self.cursor.fetchall())
+        except psycopg2.ProgrammingError:
+            pass
     def getColumnNames(self, tableName):
         # self.cursor.execute("SELECT current_schema();")
         # self.cursor.execute("SELECT * FROM stocks;")
@@ -170,12 +193,21 @@ class Database:
         return result
 
     def fetch_stocks(self):
-        self.cursor.execute("SELECT * FROM stocks")
-        return self.cursor.fetchall()
-
+        try:
+            self.cursor.execute("SELECT * FROM stocks")
+            return self.cursor.fetchall()
+        except psycopg2.InterfaceError as e:
+            print(e)
+            self.disconnect()
+            self.connect()
     def fetch_funds(self):
-        self.cursor.execute("SELECT * FROM funds")
-        return self.cursor.fetchall()
+        try:
+            self.cursor.execute("SELECT * FROM funds")
+            return self.cursor.fetchall()
+        except psycopg2.InterfaceError as e:
+            print(e)
+            self.disconnect()
+            self.connect()
 
     def commit(self):
         print("COMMITING: ")

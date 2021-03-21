@@ -110,8 +110,8 @@ def constructPortfolio(self, parameter_list):
     P.stocksBreakdown()
     P.fundsBreakdown()
     return {
-        'stocks': P.getStocks().to_json(orient='split'),
-        'funds': P.getFunds().to_json(orient='split')
+        'stocks': P.getStocks().to_json(orient='index'),
+        'funds': P.getFunds().to_json(orient='index')
     }
 
 

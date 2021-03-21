@@ -1,8 +1,7 @@
 import numpy as np
 import pandas as pd
-import requests
-from requests.exceptions import HTTPError
-
+import json
+from typing import Dict
 # financial apis 
 # from pandas_datareader.iex import IEX
 # from alpha_vantage.timeseries import TimeSeries
@@ -71,18 +70,25 @@ class Portfolio:
         assert(self.target_bonds + self.target_developing_markets + self.target_global + \
             self.target_nordic + self.target_alternative + self.target_eu == 1) # make sure fund allocation rules make sense
         
-        # for pandas version >= 0.21.0
-        #avanza_holdings = pd.read_excel(f'{constants.excelSaveLocation}/portfolio.xlsx', sheet_name=None)
-        self.stocks = pd.read_json(StringIO(avanza_holdings.get("Stocks", pd.DataFrame(columns=[]).to_json())), orient='split')
-        funds = pd.read_json(StringIO(avanza_holdings.get("Funds", pd.DataFrame(columns=[]).to_json())), orient='split')
-        etfs = pd.read_json(StringIO(avanza_holdings.get("ETFs", pd.DataFrame(columns=[]).to_json())),orient='split')
-        # merge ETFs and funds
+        avanza_stocks = pd.read_json(StringIO(avanza_holdings.get("Stocks", pd.DataFrame(columns=[]).to_json())), orient='index')
+        Utils.printDf(avanza_stocks)
+        degiro_stocks = pd.DataFrame.from_dict(degiro_holdings, orient='index')
+        degiro_stocks.loc[degiro_stocks["name"].isna(), 'name'] = degiro_stocks['id']
+        degiro_stocks.drop('id', axis=1, inplace=True)
+        col_dict = {'size': 'Shares', 'value': 'Market Value', 'name': 'Asset'}   ## key→old name, value→new name
+        degiro_stocks.columns = [col_dict.get(x, x) for x in degiro_stocks.columns]
+        degiro_stocks.reset_index(inplace=True ,drop=True)
+        stock_frames = [avanza_stocks, degiro_stocks]
+        self.stocks = pd.concat(stock_frames, ignore_index=True)
+        funds = pd.read_json(StringIO(avanza_holdings.get("Funds", pd.DataFrame(columns=[]).to_json())), orient='index')
+        etfs = pd.read_json(StringIO(avanza_holdings.get("ETFs", pd.DataFrame(columns=[]).to_json())),orient='index')
+        # merge ETFs and Funds
         frames = [funds, etfs]
         concat_funds = pd.concat(frames, keys=['Funds', 'ETFs'])
         self.funds = concat_funds
         self.certificates = pd.read_json(StringIO(avanza_holdings.get("Certificates",  pd.DataFrame(columns=[]).to_json())), orient='index')
         self.summary = pd.read_json(StringIO(avanza_holdings.get("Potfolio Summary",  pd.DataFrame(columns=[]).to_json())), orient='index')
-        
+        print(self.stocks.head(30))
         if not self.certificates.empty:
             self.cert_value = self.certificates['Market Value'].sum()
             self.certificates['Weight'] = self.certificates['Market Value'] /  self.cert_value
