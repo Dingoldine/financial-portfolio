@@ -5,7 +5,6 @@ import pandas as pd
 from io import StringIO
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy import pool, create_engine, Integer, String, Numeric, Float, Boolean, DateTime, BigInteger
-
 #import numpy as np
 class Database:
 
@@ -113,7 +112,7 @@ class Database:
         # see locks query
         self.query('select pid, usename, pg_blocking_pids(pid) as blocked_by, query as blocked_query from pg_stat_activity where cardinality(pg_blocking_pids(pid)) > 0;')
         # clear locks query
-        self.query('SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE pid <> pg_backend_pid();')
+        self.query("SELECT pg_cancel_backend(pid) FROM pg_stat_activity WHERE pid <> pg_backend_pid();")
         self.query(f'DROP TABLE IF EXISTS {tableName} CASCADE;')
         self.commit()
 
@@ -195,14 +194,17 @@ class Database:
     def fetch_stocks(self):
         try:
             self.cursor.execute("SELECT * FROM stocks")
+            self.commit()
             return self.cursor.fetchall()
         except psycopg2.InterfaceError as e:
             print(e)
             self.disconnect()
             self.connect()
+
     def fetch_funds(self):
         try:
             self.cursor.execute("SELECT * FROM funds")
+            self.commit()
             return self.cursor.fetchall()
         except psycopg2.InterfaceError as e:
             print(e)

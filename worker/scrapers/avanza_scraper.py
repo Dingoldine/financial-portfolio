@@ -100,9 +100,8 @@ def _parseHTML(data):
 
 
 def _buildDataframe(headers, rows, caption):
-    print(caption)
-    unnecessary_columns = ['+/- %', 'Konto', 'Senast', 'Tid']
-    new_column_names = ['Asset', 'Shares', 'Purchase', 'Market Value', 'Change', 'Profit']
+    unnecessary_columns = ['+/- %', 'Konto', 'Tid']
+    new_column_names = ['Asset', 'Shares', 'Latest Price', 'Purchase Price', 'Market Value (SEK)', 'Change', 'Profit', 'Currency']
     
     def stocks(headers, rows):
         #cleanup headers
@@ -115,11 +114,11 @@ def _buildDataframe(headers, rows, caption):
             del row[0] #remove sell
         df = pd.DataFrame.from_records(rows, columns=headers)
         df.name = "Stocks"
+        df["Currency"] = "SEK"
         df.drop(unnecessary_columns, axis=1, inplace=True)
         df.columns = new_column_names
         #leftMostCol = df.columns.values[0]
         #df.set_index(leftMostCol, inplace=True) # Turn this column to index
-        Utils.printDf(df)
         return(df)
 
     def funds(headers, rows):
@@ -131,12 +130,12 @@ def _buildDataframe(headers, rows, caption):
         _ = rows.pop(0) #no need for buy all funds row
         _ = rows.pop(0) #no need for summary row
         for row in rows:
-            
             del row[0]  #remove buy
             del row[0]  #rm sell
             del row[0]  #rm byt
         df = pd.DataFrame.from_records(rows, columns=headers)
         df.name = "Funds"
+        df["Currency"] = "SEK"
         df.drop(unnecessary_columns, axis=1, inplace=True)
         df.columns = new_column_names
         #leftMostCol = df.columns.values[0]
@@ -155,6 +154,7 @@ def _buildDataframe(headers, rows, caption):
             pass
 
         df = pd.DataFrame.from_records(rows, columns=headers)
+        df["Currency"] = "SEK"
         df.name = "ETFs"
         df.drop(unnecessary_columns, axis=1, inplace=True)
         df.columns = new_column_names
@@ -172,6 +172,7 @@ def _buildDataframe(headers, rows, caption):
             del row[0]  #remove buy
             del row[0]  #rm sell
         df = pd.DataFrame.from_records(rows, columns=headers)
+        df["Currency"] = "SEK"
         df.name = "Certificates"
         df.drop(unnecessary_columns, axis=1, inplace=True)
         df.columns = new_column_names

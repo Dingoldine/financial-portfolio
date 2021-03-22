@@ -37,8 +37,8 @@ services:
       - type: bind
         source: /Users/philiprumman/Projects/financial-portfolio/worker/portfolio_worker.py
         target: /app/portfolio_worker.py
-    environment:
-      - C_FORCE_ROOT=true
+    # environment:
+    #   - C_FORCE_ROOT=true
     entrypoint: celery -A portfolio_worker worker -c 2 --loglevel=info -Q default,celery
     depends_on:
       - rabbit

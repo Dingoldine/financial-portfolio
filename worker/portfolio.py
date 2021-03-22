@@ -67,19 +67,29 @@ class Portfolio:
     target_alternative = 0
 
     def __init__(self, avanza_holdings, degiro_holdings):
+
         assert(self.target_bonds + self.target_developing_markets + self.target_global + \
             self.target_nordic + self.target_alternative + self.target_eu == 1) # make sure fund allocation rules make sense
         
         avanza_stocks = pd.read_json(StringIO(avanza_holdings.get("Stocks", pd.DataFrame(columns=[]).to_json())), orient='index')
-        Utils.printDf(avanza_stocks)
+        
         degiro_stocks = pd.DataFrame.from_dict(degiro_holdings, orient='index')
+        degiro_stocks = degiro_stocks[degiro_stocks["productType"] == "STOCK"]
+        degiro_stocks.drop("productType", axis=1, inplace=True)
         degiro_stocks.loc[degiro_stocks["name"].isna(), 'name'] = degiro_stocks['id']
         degiro_stocks.drop('id', axis=1, inplace=True)
-        col_dict = {'size': 'Shares', 'value': 'Market Value', 'name': 'Asset'}   ## key→old name, value→new name
+        degiro_stocks.columns = degiro_stocks.columns.str.capitalize()
+        col_dict = {'Breakevenprice': 'Purchase Price','Size': 'Shares', 'Name': 'Asset', 'Value': 'Market Value (SEK)', 'Price': 'Latest Price'}   ## key→old name, value→new name
         degiro_stocks.columns = [col_dict.get(x, x) for x in degiro_stocks.columns]
-        degiro_stocks.reset_index(inplace=True ,drop=True)
+        degiro_stocks['Change'] = degiro_stocks['Latest Price'] / degiro_stocks['Purchase Price'] - 1
+        degiro_stocks['Profit'] = degiro_stocks['Market Value (SEK)'] * degiro_stocks['Change'] - 1
+        degiro_stocks.reset_index(inplace=True, drop=True)
+        
         stock_frames = [avanza_stocks, degiro_stocks]
         self.stocks = pd.concat(stock_frames, ignore_index=True)
+        self.stocks.name = "Stocks"
+
+
         funds = pd.read_json(StringIO(avanza_holdings.get("Funds", pd.DataFrame(columns=[]).to_json())), orient='index')
         etfs = pd.read_json(StringIO(avanza_holdings.get("ETFs", pd.DataFrame(columns=[]).to_json())),orient='index')
         # merge ETFs and Funds
@@ -88,21 +98,24 @@ class Portfolio:
         self.funds = concat_funds
         self.certificates = pd.read_json(StringIO(avanza_holdings.get("Certificates",  pd.DataFrame(columns=[]).to_json())), orient='index')
         self.summary = pd.read_json(StringIO(avanza_holdings.get("Potfolio Summary",  pd.DataFrame(columns=[]).to_json())), orient='index')
-        print(self.stocks.head(30))
+
         if not self.certificates.empty:
-            self.cert_value = self.certificates['Market Value'].sum()
-            self.certificates['Weight'] = self.certificates['Market Value'] /  self.cert_value
+            self.cert_value = self.certificates['Market Value (SEK)'].sum()
+            self.certificates['Weight'] = self.certificates['Market Value (SEK)'] /  self.cert_value
         else:
             self.cert_value = 0
-        self.stocks_value = self.stocks['Market Value'].sum()   
-        self.funds_value = self.funds['Market Value'].sum()
+        self.stocks_value = self.stocks['Market Value (SEK)'].sum()   
+        self.funds_value = self.funds['Market Value (SEK)'].sum()
         
 
         self.portfolio_value = self.stocks_value + self.funds_value + self.cert_value
 
-        self.stocks['Weight'] = self.stocks['Market Value'] /  self.stocks_value
-        self.funds['Weight'] = self.funds['Market Value'] /  self.funds_value
-        
+        self.stocks['Weight'] = self.stocks['Market Value (SEK)'] /  self.stocks_value
+        self.funds['Weight'] = self.funds['Market Value (SEK)'] /  self.funds_value
+
+        assert(np.isclose(self.stocks["Weight"].sum(), 1, rtol=1e-03, atol=1e-04))
+        assert(np.isclose(self.funds['Weight'].sum(), 1, rtol=1e-03, atol=1e-04))
+
     def getStocks(self):
         return self.stocks
     def getFunds(self):
@@ -133,7 +146,6 @@ class Portfolio:
         
     def parseFundDetailsPage(self, instrument):
         html = Utils.readTxtFile(instrument)
-        print(instrument)
         soup = BeautifulSoup(html, 'lxml')
         fee_tag = soup.find("h3", attrs= {'data-e2e': 'fon-guide-total-fee'})
 
@@ -414,7 +426,7 @@ class Portfolio:
         def rebalance(w, t):
             '''Rebalancing function that assumes portfolio value is fix, takes the current weight w and the target weight t 
             and calculates SEK value to Sell/Buy to achieve target '''
-            totValue = df['Market Value'].sum()
+            totValue = df['Market Value (SEK)'].sum()
             totalBuyAmount = 0
             investedInType = w * totValue
 
@@ -514,7 +526,7 @@ class Portfolio:
 
         self.funds = df
         self.funds.name = "Funds"
-        Excel.create(dataframeList, 'Funds', 1, "Currency is in SEK")
+        #Excel.create(dataframeList, 'Funds', 1, "Currency is in SEK")
         print("#################### END OF FUNDS #####################")
         
 
@@ -529,100 +541,92 @@ class Portfolio:
         return df
 
     
-    def stocksBreakdown(self):
-        print("#################### STOCKS #####################")
+    def damodaranStockLookup(self, asset):
         wb =  Utils.readExcel('indname.xls')
         companyExcelList = wb.sheet_by_name('Industry sorted (Global)')
         ## complex string lookup, MIGHT NEED ATTENTION LATER
-        for asset in self.stocks['Asset']  :
-            matches = {}
-            # Treat this complex case, only one that does not get market correct currently, NEED IMPROVEMENT LATER
-            if (asset == 'SCA B'):
-                asset = 'Svenska Cellulosa Aktiebolaget'
-            for row in range(1, companyExcelList.nrows):
-                excelName = companyExcelList.cell(row, 1).value
-                matchRatio =  fuzz.ratio(excelName.lower(), asset.lower())
-                partialRatio = fuzz.partial_ratio(excelName.lower(), asset.lower())
-                if((matchRatio > 61 and asset.split(' ')[0] + ' ' in excelName) or (partialRatio > 75 and asset.split(' ')[0] + ' ' in excelName)):
-                    # print('partial:', partialRatio, 'full:', matchRatio)
-                    # print(asset, excelName)
-                    industryGroup = companyExcelList.cell(row, 0).value
-                    ticker = companyExcelList.cell(row, 2).value
-                    country = companyExcelList.cell(row, 3).value
-                    broadRegion = companyExcelList.cell(row, 4).value
-                    subRegion = companyExcelList.cell(row, 5).value
-                    # print(asset, excelName, industryGroup, ticker, country, broadRegion, subRegion)
-                    matches[excelName] = [ticker, country, broadRegion, subRegion, industryGroup]
-                    
-
-            if len(matches) > 1:
-                highest = process.extractOne(asset.lower(), list(matches.keys()))
-                d = matches.get(highest[0])
-            
-            elif len(matches) < 1:
-                #print('NO MATCH:', asset) 
-                d = []
-            else:
-                d = list(matches.values())[0] 
-
-            # reverse special case
-            if asset == 'Svenska Cellulosa Aktiebolaget':
-                asset = 'SCA B'
-
-            if len(d) > 0:
-                self.stocks.loc[self.stocks['Asset'] == asset, 'Ticker'] = d[0]
-                self.stocks.loc[self.stocks['Asset'] == asset, 'Country'] = d[1]
-                self.stocks.loc[self.stocks['Asset'] == asset, 'Broad Region'] = d[2]
-                self.stocks.loc[self.stocks['Asset'] == asset, 'Sub Region'] = d[3]
-                self.stocks.loc[self.stocks['Asset'] == asset, 'Industry Group (Damodaran)'] = d[4]
-            
-            # get stock financials
-            try:
-                financialsWB = Utils.readExcel(f'{asset}.xlsx')
-
-                # get sheets
-                overviewSheet = financialsWB.sheet_by_name('Overview')
-                incomestatementSheet = financialsWB.sheet_by_name('Income Statement')
+        matches = {}
+        for row in range(1, companyExcelList.nrows):
+            excelName = companyExcelList.cell(row, 1).value
+            matchRatio =  fuzz.ratio(excelName.lower(), asset.lower())
+            partialRatio = fuzz.partial_ratio(excelName.lower(), asset.lower())
+            if((matchRatio > 61 and asset.split(' ')[0] + ' ' in excelName) or (partialRatio > 75 and asset.split(' ')[0] + ' ' in excelName)):
+                # print('partial:', partialRatio, 'full:', matchRatio)
+                # print(asset, excelName)
+                industryGroup = companyExcelList.cell(row, 0).value
+                ticker = companyExcelList.cell(row, 2).value
+                country = companyExcelList.cell(row, 3).value
+                broadRegion = companyExcelList.cell(row, 4).value
+                subRegion = companyExcelList.cell(row, 5).value
+                # print(asset, excelName, industryGroup, ticker, country, broadRegion, subRegion)
+                matches[excelName] = [ticker, country, broadRegion, subRegion, industryGroup]
                 
-                for rowidx in range(overviewSheet.nrows):
-                    row = overviewSheet.row_values(rowidx)
-                    if ((row[0] != "") and not ('except "Basic EPS"' in row[0])): # disregard currency row and empty rows
-                        self.stocks.loc[self.stocks['Asset'] == asset, row[0]] = row[1]
+        if len(matches) > 1:
+            highest = process.extractOne(asset.lower(), list(matches.keys()))
+            d = matches.get(highest[0])
+        elif len(matches) < 1:
+            #print('NO MATCH:', asset) 
+            d = []
+        else:
+            d = list(matches.values())[0] 
 
-                for rowidx in range(incomestatementSheet.nrows):
-                    row_values = incomestatementSheet.row_values(rowidx)
-                    
-                    if row_values[0] == "Basic": #basic eps
-                        latestEps = row_values[incomestatementSheet.ncols - 1] # latest year
-                        latestYear = incomestatementSheet.cell_value(0, incomestatementSheet.ncols - 1)
-                        self.stocks.loc[self.stocks['Asset'] == asset, f'EPS ({latestYear})'] = latestEps
-            except FileNotFoundError:
-                pass
-             
-            # industry betas
-            indDamodaran = self.stocks.loc[self.stocks['Asset'] == asset, 'Industry Group (Damodaran)'].values[0]
-            print(indDamodaran)
-            try:
-                betasGlobalWB = Utils.readExcel('betasGlobal.xls')
-                betasUSWB = Utils.readExcel('betasUS.xlsx')
+        if len(d) > 0:
+            self.stocks.loc[self.stocks['Asset'] == asset, 'Ticker'] = d[0]
+            self.stocks.loc[self.stocks['Asset'] == asset, 'Country'] = d[1]
+            self.stocks.loc[self.stocks['Asset'] == asset, 'Broad Region'] = d[2]
+            self.stocks.loc[self.stocks['Asset'] == asset, 'Sub Region'] = d[3]
+            self.stocks.loc[self.stocks['Asset'] == asset, 'Industry Group (Damodaran)'] = d[4]
 
-                beta_global_averages = betasGlobalWB.sheet_by_name('Industry Averages')
-                beta_us_averages = betasUSWB.sheet_by_name('Industry Averages')
+        # industry betas
+        indDamodaran = self.stocks.loc[self.stocks['Asset'] == asset, 'Industry Group (Damodaran)'].values[0]
+        print(indDamodaran)
+        try:
+            betasGlobalWB = Utils.readExcel('betasGlobal.xls')
+            betasUSWB = Utils.readExcel('betasUS.xlsx')
 
-                # global 
-                for rowidx in range(beta_global_averages.nrows):
-                    row_values = beta_global_averages.row_values(rowidx)
-                    if row_values[0] == indDamodaran:
-                        self.stocks.loc[self.stocks['Asset'] == asset, 'Unlevered beta (Global)'] = row_values[5]
-                
-                # us
-                for rowidx in range(beta_us_averages.nrows):
-                    row_values = beta_us_averages.row_values(rowidx)
-                    if row_values[0] == indDamodaran:
-                        self.stocks.loc[self.stocks['Asset'] == asset, 'Unlevered beta (US)'] = row_values[5]
+            beta_global_averages = betasGlobalWB.sheet_by_name('Industry Averages')
+            beta_us_averages = betasUSWB.sheet_by_name('Industry Averages')
+
+            # global 
+            for rowidx in range(beta_global_averages.nrows):
+                row_values = beta_global_averages.row_values(rowidx)
+                if row_values[0] == indDamodaran:
+                    self.stocks.loc[self.stocks['Asset'] == asset, 'Unlevered beta (Global)'] = row_values[5]
             
-            except FileNotFoundError:
-                raise
+            # us
+            for rowidx in range(beta_us_averages.nrows):
+                row_values = beta_us_averages.row_values(rowidx)
+                if row_values[0] == indDamodaran:
+                    self.stocks.loc[self.stocks['Asset'] == asset, 'Unlevered beta (US)'] = row_values[5]
+        
+        except FileNotFoundError:
+            raise
+            
+    def nasdaqStockFinancials(self, asset):
+        # get stock financials
+        try:
+            financialsWB = Utils.readExcel(f'{asset}.xlsx')
+
+            # get sheets
+            overviewSheet = financialsWB.sheet_by_name('Overview')
+            incomestatementSheet = financialsWB.sheet_by_name('Income Statement')
+            
+            for rowidx in range(overviewSheet.nrows):
+                row = overviewSheet.row_values(rowidx)
+                if ((row[0] != "") and not ('except "Basic EPS"' in row[0])): # disregard currency row and empty rows
+                    self.stocks.loc[self.stocks['Asset'] == asset, row[0]] = row[1]
+
+            for rowidx in range(incomestatementSheet.nrows):
+                row_values = incomestatementSheet.row_values(rowidx)
+                
+                if row_values[0] == "Basic": #basic eps
+                    latestEps = row_values[incomestatementSheet.ncols - 1] # latest year
+                    latestYear = incomestatementSheet.cell_value(0, incomestatementSheet.ncols - 1)
+                    self.stocks.loc[self.stocks['Asset'] == asset, f'EPS ({latestYear})'] = latestEps
+        except FileNotFoundError:
+            pass
+                     
+            
      
         theFilter = [col for col in self.stocks if col.startswith('EPS')]
         moneyLosingStocks = self.stocks.loc[(self.stocks[theFilter] < 0).any(axis=1), :]
@@ -632,15 +636,22 @@ class Portfolio:
         if moneyLosingWeight > self.max_growth_stocks: # growth stocks are money losing
             difference = moneyLosingWeight - self.max_growth_stocks
             # print(self.max_growth_stocks, moneyLosingWeight, difference)
-            amountShouldSell = self.stocks['Market Value'].sum() * difference
+            amountShouldSell = self.stocks['Market Value (SEK)'].sum() * difference
             print(f'Sell {amountShouldSell} in any/or a mixture of {moneyLosingStocks.Asset.values} to be compliant with portfolio rules')
             # CALCULATE HOW MUCH TO SELL IN TERMS OF SEK IN ANY OF OR A MIX OF THE MONEY LOSING COMPANIES
         
         # convert employees col to int, but IT DOESNT WOR BECAUSE NAN VALUES EXIST IN FRAME, AND THUS IN PANDAS IT WILL BE FLOAT
         self.stocks["Employees"] = self.stocks["Employees"].apply(pd.to_numeric, errors="coerce")
     
-        self.stocks.name = "Stocks"
-        leftMostCol = self.stocks.columns.values[0]
-        self.stocks.set_index(leftMostCol, inplace=True) # Turn this column to index
+    def stocksBreakdown(self):
+        print("#################### STOCKS #####################")
+        for asset in self.stocks['Asset']: 
+            self.damodaranStockLookup(asset)
+            self.nasdaqStockFinancials(asset)
+
+
+
+        #leftMostCol = self.stocks.columns.values[0]
+        #self.stocks.set_index(leftMostCol, inplace=True) # Turn this column to index
 
         print("#################### END OF STOCKS #####################")

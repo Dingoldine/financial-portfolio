@@ -107,8 +107,8 @@ def constructPortfolio(self, parameter_list):
     (avanzaHoldings, degiroHoldings) = parameter_list
 
     P = Portfolio(avanzaHoldings, degiroHoldings)
-    P.stocksBreakdown()
-    P.fundsBreakdown()
+    #P.stocksBreakdown()
+    #P.fundsBreakdown()
     return {
         'stocks': P.getStocks().to_json(orient='index'),
         'funds': P.getFunds().to_json(orient='index')

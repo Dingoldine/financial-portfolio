@@ -43,6 +43,44 @@ def extractSessionID(s: Session):
 # def extractAccountInfo(res: Response):
 #     https://trader.degiro.nl/trading/secure/v5/account/info/121008181;jsessionid=5E4877BF0E02E8F8CD70AC15F3DDFE67.prod_b_114_1
 
+def clean(d: Dict):
+    keys_to_be_deleted = [
+        "contractSize",
+        "productTypeId",
+        "tradable",
+        "exchangeId",
+        "onlyEodPrices",
+        "orderTimeTypes",
+        "buyOrderTypes",
+        "sellOrderTypes",
+        "productBitTypes",
+        "feedQuality",
+        "orderBookDepth",
+        "vwdIdentifierType",
+        "vwdId",
+        "qualitySwitchable",
+        "qualitySwitchFree",
+        "orderBookDepth",
+        "vwdModuleId",
+        "feedQualitySecondary",
+        "orderBookDepthSecondary",
+        "qualitySwitchableSecondary",
+        "qualitySwitchFreeSecondary",
+        "vwdModuleIdSecondary",
+        "vwdIdentifierTypeSecondary",
+        "vwdIdSecondary",
+        "category",
+        "closePrice",
+        "closePriceDate"
+        ]
+   
+    for value in d.values():
+        for key in keys_to_be_deleted:
+            try:
+                del value[key]
+            except KeyError:
+                continue
+    return d
 def extractAccountID(res: Response):
     return '121008181'
 
@@ -156,8 +194,5 @@ def scrapeTEST():
 
         with open(os.path.join(os.getcwd(), 'requestResponse.txt'), 'r') as secondFile:
             stockHoldings = eval(secondFile.read().replace('true', 'True').replace('false', 'False')).get('data')
-            return mergeDicts(stockHoldings, positionsDict)
-
-       # convertToPandasFormat(mergedDict)
-
-scrapeTEST()
+            mergedDict = mergeDicts(stockHoldings, positionsDict)
+            return clean(mergedDict)
