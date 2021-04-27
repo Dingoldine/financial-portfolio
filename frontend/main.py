@@ -58,11 +58,25 @@ async def getStocks(request: Request, response_class=HTMLResponse):
         content = res.json()
         stock_data = content.get("data")
         print(json.dumps(stock_data, indent=2))
-        stock_columns = content.get("columns")
-        return templates.TemplateResponse("/stock_page/stocks.html", {"request": request, "stock_data": stock_data, "stock_columns": stock_columns})
+        return templates.TemplateResponse("/stock_page/stocks.html", {"request": request, "stock_data": stock_data})
     else:
         raise(HTTPException(status_code=res.status_code, detail="Error"))
+
+@app.put("/stock/update")
+async def updateStock(request: Request):
+    print(request)
+    return {}
+    # res = requests.get(f'http://{server_host_address}/getStocks')
+    
+    # if (res.status_code) == 200:
+    #     content = res.json()
+    #     stock_data = content.get("data")
+    #     print(json.dumps(stock_data, indent=2))
+    #     return templates.TemplateResponse("/stock_page/stocks.html", {"request": request, "stock_data": stock_data})
+    # else:
+    #     raise(HTTPException(status_code=res.status_code, detail="Error"))
         
+
 @app.get("/funds")
 async def getFunds(request: Request, response_class=HTMLResponse):
     res = requests.get(f'http://{server_host_address}/getFunds')
@@ -76,8 +90,6 @@ async def getFunds(request: Request, response_class=HTMLResponse):
     else:
         raise(HTTPException(status_code=res.status_code, detail="Error"))
         
-
-
 @app.get("/portfolio/update")
 async def updatePortfolio():
     #avanza_scraper.scrape()

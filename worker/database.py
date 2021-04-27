@@ -108,18 +108,22 @@ class Database:
     # HAS PROVEN TO CAUSE LOCKS ON DATABASE IF TABLE ALREADY EXISTS
     def createTableFromDF(self, json, tableName):
         # drop manually because of bug 
+
         # see locks query
-        #self.query('select pid, usename, pg_blocking_pids(pid) as blocked_by, query as blocked_query from pg_stat_activity where cardinality(pg_blocking_pids(pid)) > 0;')
+        self.query('select pid, usename, pg_blocking_pids(pid) as blocked_by, query as blocked_query from pg_stat_activity where cardinality(pg_blocking_pids(pid)) > 0;')
         # clear locks query
-        #self.query("SELECT pg_cancel_backend(pid) FROM pg_stat_activity WHERE pid <> pg_backend_pid();")
-        #self.query(f'DROP TABLE IF EXISTS {tableName} CASCADE;')
-        #self.commit()
+        self.query("SELECT pg_cancel_backend(pid) FROM pg_stat_activity WHERE pid <> pg_backend_pid();")
+        self.query(f'DROP TABLE IF EXISTS {tableName} CASCADE;')
+        self.commit()
+
 
         df=pd.read_json(StringIO(json), orient='index')
+        print(df.head(5))
         #df = df.copy()
         df.columns = df.columns.str.replace(' ', '_').str.lower().str.replace('(', '').str.replace(')', '')
-        #df.reset_index(inplace=True)
-        #df.rename(columns={ df.columns[0]: 'asset' }, inplace=True)
+        df.reset_index(inplace=True)
+
+        df.rename(columns={ df.columns[0]: 'asset' }, inplace=True)
 
         def changeType(x):
             switcher = {
@@ -189,7 +193,7 @@ class Database:
 
     def fetch_stocks(self):
         try:
-            self.cursor.execute("SELECT * FROM stocks")
+            self.cursor.execute("SELECT JSON_AGG(t) FROM (SELECT * FROM stocks) AS t")
             self.commit()
             return self.cursor.fetchall()
         except psycopg2.InterfaceError as e:

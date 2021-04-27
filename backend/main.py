@@ -89,9 +89,8 @@ async def getFunds():
 
 @app.get("/getStocks")
 async def getStocks():
-    data = db.fetch_stocks()
-    columns = db.getColumnNames('stocks')
-    return {"data": data, "columns": columns}
+    data = db.fetch_stocks()[0][0] #for some reason the result is way nested 
+    return {"data": data}
 
 @app.get("/doRefresh")
 

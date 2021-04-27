@@ -193,7 +193,7 @@ class Database:
 
     def fetch_stocks(self):
         try:
-            self.cursor.execute("SELECT * FROM stocks")
+            self.cursor.execute("SELECT JSON_AGG(t) FROM (SELECT * FROM stocks) AS t")
             self.commit()
             return self.cursor.fetchall()
         except psycopg2.InterfaceError as e:
