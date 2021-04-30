@@ -2,6 +2,8 @@ from fastapi import FastAPI, Request, Response, HTTPException
 import requests
 import configparser
 import json
+from typing import Optional
+from pydantic import BaseModel
 from fastapi.responses import HTMLResponse, FileResponse, RedirectResponse
 #import scrapers.avanza_scraper as avanza_scraper
 from fastapi.staticfiles import StaticFiles
@@ -27,7 +29,6 @@ async def startup():
 async def shutdown():
     print("server shutting down....")
     
-
 @app.get("/", response_class=HTMLResponse)
 async def root(request: Request):
     return RedirectResponse("/portfolio")
@@ -58,14 +59,35 @@ async def getStocks(request: Request, response_class=HTMLResponse):
         content = res.json()
         stock_data = content.get("data")
         print(json.dumps(stock_data, indent=2))
-        return templates.TemplateResponse("/stock_page/stocks.html", {"request": request, "stock_data": stock_data})
+        return templates.TemplateResponse("/stock_page/stocks.html", {"request": request, "stock_data": stock_data, "stock_headers":list(stock_data[0].keys())})
     else:
         raise(HTTPException(status_code=res.status_code, detail="Error"))
-
+class Stock(BaseModel):
+    asset: str
+    change: float
+    currency: str
+    isin: str
+    latest_price: float
+    market_value_sek: float
+    profit:  Optional[float]
+    purchase_price: float
+    weight: float
+    shares: int
+    symbol: str
+    asset_class: Optional[str]
 @app.put("/stock/update")
-async def updateStock(request: Request):
-    print(request)
-    return {}
+async def updateStock(stock: Stock, response_model=Stock):
+    print(stock.dict())
+    res = requests.put(f'http://{server_host_address}/updateStock', json=stock.dict())
+    if (res.status_code) == 200:
+        content = res.json()
+        msg = content.get("message")
+        print(msg)
+        return stock
+    else:
+        print(res.json())
+        raise(HTTPException(status_code=res.status_code, detail="Error"))
+
     # res = requests.get(f'http://{server_host_address}/getStocks')
     
     # if (res.status_code) == 200:

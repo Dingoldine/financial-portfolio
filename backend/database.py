@@ -4,7 +4,7 @@ import configparser, psycopg2, sys, time
 import pandas as pd
 from io import StringIO
 from sqlalchemy.orm import sessionmaker
-from sqlalchemy import pool, create_engine, Integer, String, Numeric, Float, Boolean, DateTime, BigInteger
+from sqlalchemy import pool, create_engine, Integer, String, Numeric, Float, Boolean, DateTime, BigInteger, text
 #import numpy as np
 class Database:
 
@@ -118,12 +118,12 @@ class Database:
 
 
         df=pd.read_json(StringIO(json), orient='index')
-        print(df.head(5))
-        #df = df.copy()
+  
+        df['asset_class'] = 'undefined'
         df.columns = df.columns.str.replace(' ', '_').str.lower().str.replace('(', '').str.replace(')', '')
-        df.reset_index(inplace=True)
+        #df.reset_index(inplace=True)
 
-        df.rename(columns={ df.columns[0]: 'asset' }, inplace=True)
+        #df.rename(columns={ df.columns[0]: 'asset' }, inplace=True)
 
         def changeType(x):
             switcher = {
@@ -134,9 +134,10 @@ class Database:
                 'M': DateTime()
             }
             return switcher.get(x.kind)
- 
+        
+        print(df.head(5))
         dTypeDict = dict(df.dtypes.apply(changeType))
-
+        print(str(dTypeDict.items()))
         try:
             with self.engine.connect() as connection:
                 df.to_sql(tableName, con=connection, index=False, dtype=dTypeDict, if_exists='replace')
@@ -174,7 +175,7 @@ class Database:
             print("PostgreSQL connection is closed")
         except (Exception, psycopg2.Error) as error :
             print ("Error while disconnecting from PostgreSQL", error)
-            
+
     def query(self, query):
         try:  
             print("executing: ", query)
@@ -182,6 +183,8 @@ class Database:
             print(self.cursor.fetchall())
         except psycopg2.ProgrammingError:
             pass
+
+
     def getColumnNames(self, tableName):
         # self.cursor.execute("SELECT current_schema();")
         # self.cursor.execute("SELECT * FROM stocks;")
@@ -191,9 +194,19 @@ class Database:
             result.append(col[0].upper())
         return result
 
+    def updateStockTable(self, stock, session):
+        try:
+            command = f"UPDATE stocks SET asset_class='{stock.asset_class}' WHERE asset='{stock.asset}';"
+            session.execute(text(command))
+            session.commit()
+        except:
+            session.rollback()
+            raise
+        
     def fetch_stocks(self):
         try:
-            self.cursor.execute("SELECT JSON_AGG(t) FROM (SELECT * FROM stocks) AS t")
+            selectList =             selectList = "asset, shares, ROUND(cast(purchase_price as numeric),2) AS purchase_price, ROUND(cast(latest_price as numeric),2) AS latest_price, ROUND(cast(market_value_sek as numeric),2) AS market_value_sek, ROUND(cast(change as numeric),4) AS change, currency, isin, symbol, ROUND(cast(weight as numeric),4) AS weight, asset_class"
+            self.cursor.execute(f"SELECT JSON_AGG(t) FROM (SELECT {selectList} FROM stocks) AS t")
             self.commit()
             return self.cursor.fetchall()
         except psycopg2.InterfaceError as e:
@@ -213,4 +226,5 @@ class Database:
 
     def commit(self):
         print("COMMITING: ")
+        self.connection.commit()
         self.connection.commit()
