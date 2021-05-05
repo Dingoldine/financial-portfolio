@@ -10,11 +10,16 @@ services:
       - 8080:80
     depends_on:
       - backend
-  postgres:
-    image: docker.io/postgres:13.1
-    env_file: ./env/postgres.env
-    ports:
+  timescaledb: 
+    image: docker.io/timescale/timescaledb:2.2.0-pg13
+    env_file: ./env/postgres.env 
+    ports: 
       - 5432:5432
+  # postgres:
+  #   image: docker.io/postgres:13.1
+  #   env_file: ./env/postgres.env
+  #   ports:
+  #     - 5432:5432
   backend:
     build: ./backend
     #entrypoint: watchmedo auto-restart --recursive --pattern="*.py" --directory="." python3 main.py
@@ -26,7 +31,7 @@ services:
         source: /Users/philiprumman/Projects/financial-portfolio/backend/database.py
         target: /app/database.py
     depends_on:
-      - postgres
+      - timescaledb
       - worker
   worker:
     build: ./worker

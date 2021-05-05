@@ -1,0 +1,66 @@
+
+.thead-dark {
+    background: #1c1d1d4a;
+    color: white;
+    border-style: unset;
+    text-transform: uppercase;
+  }
+  
+  .editable_cell {
+    display:inline;
+  }
+  
+  .tooltip {
+    opacity: 0.7;
+    background-color: black;
+    position: absolute;
+    color: white;
+    padding: 5px 15px 5px 15px;
+    border-radius: 15px;
+  }
+  .treemap-rect-symbol {
+   font-size: 15px;
+   fill: white;
+  }
+  .treemap-rect {
+    stroke: black;
+    fill: slateblue;
+  }
+  .treemap-rect-values {
+    font-size: 11px;
+    fill: white;
+  }
+  .treemap-group-headings {
+    fill: grey;
+    font-size: 13px;
+  }
+
+  .donut-chart-path {
+    stroke-width: 2px;
+    opacity: 0.8;
+    transform: translate(0, 0);
+  }
+
+
+  .table-wrapper {
+    text-align: center;
+    height: fit-content;
+    width: 100%;
+    padding: 2em;
+    max-width: -moz-fit-content;
+    margin: auto;
+  }
+  
+  .donut-wrapper {
+    padding: 5em !important;
+  }
+  
+  .dataTables_scrollHeadInner {
+    margin: 0 auto;
+  }
+  .graph-wrapper {
+    width: -moz-fit-content;
+    padding: 10px;
+    margin: auto;
+    min-width: 80%;
+  }

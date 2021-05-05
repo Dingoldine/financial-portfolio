@@ -20,23 +20,6 @@ else:
 try:
     celery_app = Celery('portfolio_worker', broker=broker)
     celery_app.config_from_object(celeryconfig)
-    # .conf.update(
-    #     accept_content=['json', 'json', 'application/x-python-serialize'],
-    #     timezone='Europe/Stockholm',
-    #     enable_utc=True,
-    #     task_serializer="json",
-    #     result_accept_content=['json', 'json', 'application/x-python-serialize'],
-    #     result_backend='redis://redis:6379/0',
-    #     task_routes = {
-    #         'portfolio_worker.tasks.updatePortfolio': {
-    #             'queue': 'default',
-    #             'routing_key': 'default',
-    #         },
-    #     },
-    #     task_default_queue = 'default',
-    #     task_default_exchange_type = 'direct',
-    #     task_default_routing_key = 'default'
-    # )
 except:
     print("Could not connect to broker")
     sys.exit(-1)
@@ -84,8 +67,9 @@ def updateDB(self, portfolio):
     logger.info("----Updating db----")
     logger.info(portfolio)
     try:
-        db.createTableFromDF(portfolio.get('stocks'), "stocks")
-        db.createTableFromDF(portfolio.get('funds'), "funds")
+        #db.createTableFromDF(portfolio.get('stocks'), "stocks")
+        #db.createTableFromDF(portfolio.get('funds'), "funds")
+        db.createTableFromDF(portfolio.get('portfolio'), "portfolio")
         logger.info("----Updating db completed successfully----")
         return {}
     except Exception:
@@ -110,8 +94,9 @@ def constructPortfolio(self, parameter_list):
     #P.stocksBreakdown()
     #P.fundsBreakdown()
     return {
-        'stocks': P.getStocks().to_json(orient='index'),
-        'funds': P.getFunds().to_json(orient='index')
+        #'stocks': P.getStocks().to_json(orient='index'),
+        #'funds': P.getFunds().to_json(orient='index'),
+        'portfolio': P.getPortfolio().to_json(orient='index')
     }
 
 

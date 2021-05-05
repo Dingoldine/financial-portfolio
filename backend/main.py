@@ -47,27 +47,39 @@ def get_db():
 @app.on_event("startup")
 async def startup():
     print("starting server....")
-    global db
-    global P
-    db = Database()
-    db.connect()
-    db.create()
-    db.commit()
+    try:
+        print('Initializing database connection..')
+        global db
+        global P
+        db = Database()
+        db.connect()
+        db.create()
+        db.commit()
+    except Exception:
+        raise
+
 
 @app.on_event("shutdown")
 async def shutdown():
     print("server shutting down....")
     await db.disconnect()
 
+
+@app.get("/getPortfolio")
+def getPortfolio():
+    data = db.fetch_portfolio()[0][0]
+    performance = db.fetch_portfolio_performance()[0][0]
+    return {"data": data, "performance": performance}
+
 @app.get("/getFunds")
-async def getFunds():
+def getFunds():
     data = db.fetch_funds()
     columns = db.getColumnNames('funds')
     return {"data": data, "columns": columns}
 
 @app.get("/getStocks")
-async def getStocks():
-    data = db.fetch_stocks()[0][0] #for some reason the result is way nested 
+def getStocks():
+    data = db.fetch_stocks()[0][0] #for some reason the result is way nested
     return {"data": data}
 
 @app.get("/doRefresh")
@@ -119,7 +131,7 @@ class Stock(BaseModel):
 @app.put('/updateStock')
 def updateStock(stock: Stock, dbSession: Session = Depends(get_db)):
     print(stock)
-    db.updateStockTable(stock, dbSession)
+    db.updatePortfolioTable(stock, dbSession)
     return {"message": "update successfull"}
 
 @app.get("/resetDatabase")

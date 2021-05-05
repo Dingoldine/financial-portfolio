@@ -54,6 +54,12 @@
 
   const data = {{ stock_data | tojson }};
 
+  if(!data.length){
+    console.log("HANDLE EMPTY")
+    throw new Error("Stop script");
+  }
+
+
   const data_headers = {{ stock_headers | tojson }}
 
   const build_treemap = () => {
@@ -103,9 +109,7 @@
         .attr('y', function (d) { return d.y0; })
         .attr('width', function (d) { return d.x1 - d.x0; })
         .attr('height', function (d) { return d.y1 - d.y0; })
-        .attr("class", "hover-shadow")
-        .style("stroke", "black")
-        .style("fill", "slateblue")
+        .attr("class", "treemap-rect")
         .style("opacity", function(d){ return opacity(d.data.weight * 200)})
               //Makes the div appear on hover
       .on('mouseover', function(event, d) {
@@ -158,15 +162,14 @@
       .data(root.descendants().filter(function(d){return d.depth==1}))
       .enter()
       .append("text")
+        .attr('class', 'treemap-group-headings')
         .attr("x", function(d){ return d.x0 + 15})
         .attr("y", function(d){ return d.y0+8})
         .text(function(d){ 
           console.log(d)
           return `${d.data[0]} ${(d.value * 100).toFixed(2)}%` 
         })
-        .attr("font-size", "15px")
-        .attr("fill",  function(d){ return "grey" })// color(d.data.name)} )
-  
+        .attr("font-size", "15px")  
     };
 
   const build_donut_chart = () => {
@@ -386,7 +389,7 @@
       console.log(payload)
       $.ajax({
         type: "PUT",
-        url: '/stock/update',
+        url: '/portfolio/update',
         data: JSON.stringify(payload),
         success: function(d, status) {
           console.log(d, status)

@@ -107,20 +107,28 @@ class Portfolio:
         self.stocks_value = self.stocks['Market Value (SEK)'].sum()   
         self.funds_value = self.funds['Market Value (SEK)'].sum()
         
-
-        self.portfolio_value = self.stocks_value + self.funds_value + self.cert_value
-
         self.stocks['Weight'] = self.stocks['Market Value (SEK)'] /  self.stocks_value
         self.funds['Weight'] = self.funds['Market Value (SEK)'] /  self.funds_value
 
         assert(np.isclose(self.stocks["Weight"].sum(), 1, rtol=1e-03, atol=1e-04))
         assert(np.isclose(self.funds['Weight'].sum(), 1, rtol=1e-03, atol=1e-04))
+        
+        self.funds["is_fund"] = True
+        self.stocks["is_fund"] = False
+
+        self.portfolio_value = self.stocks_value + self.funds_value + self.cert_value
+        self.portfolio = pd.concat([self.stocks, self.funds], ignore_index=True)
+        self.portfolio['Weight_Portfolio'] = self.portfolio['Market Value (SEK)'] /  self.portfolio_value
+        self.portfolio.name = "Portfolio"
 
     def getStocks(self):
         return self.stocks
     def getFunds(self):
         return self.funds
+    def getPortfolio(self):
+        return self.portfolio
 
+       
     def generateStocksExcel(self):
         Excel.create([self.stocks], "Stocks", 1)
     

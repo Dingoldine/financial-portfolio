@@ -35,20 +35,20 @@ async def root(request: Request):
 
 @app.get("/portfolio")
 async def getPortfolio(request: Request, response_class=HTMLResponse):
-    res1 = requests.get(f'http://{server_host_address}/getStocks')
-    res2 = requests.get(f'http://{server_host_address}/getFunds')
+    res = requests.get(f'http://{server_host_address}/getPortfolio')
     
-    if (res1.status_code and res2.status_code) == 200:
-        content1 = res1.json()
-        stock_data = content1.get("data")
-        stock_columns = content1.get("columns")
-
-        content2 = res2.json()
-        fund_data = content2.get("data")
-        fund_columns = content2.get("columns")
-        return templates.TemplateResponse("/home_page/home.html", {"request": request, "stock_data": stock_data, "stock_columns": stock_columns,"fund_data": fund_data, "fund_columns": fund_columns})
+    if (res.status_code == 200):
+        content = res.json()
+        portfolio_data = content.get("data")
+        portfolio_performance = content.get("performance") 
+        if (len(portfolio_data) != 0):
+            print(portfolio_data) 
+            portfolio_headers = list(portfolio_data[0].keys())
+        else:
+            portfolio_headers = []
+        return templates.TemplateResponse("/home_page/home.html", {"request": request, "portfolio_data": portfolio_data, "portfolio_headers": portfolio_headers, "portfolio_performance": portfolio_performance})
     else:
-        raise(HTTPException(status_code=res1.status_code, detail="Error"))
+        raise(HTTPException(status_code=res.status_code, detail="Error"))
 
 
 @app.get("/stocks")
@@ -59,7 +59,11 @@ async def getStocks(request: Request, response_class=HTMLResponse):
         content = res.json()
         stock_data = content.get("data")
         print(json.dumps(stock_data, indent=2))
-        return templates.TemplateResponse("/stock_page/stocks.html", {"request": request, "stock_data": stock_data, "stock_headers":list(stock_data[0].keys())})
+        if (len(stock_data) != 0): 
+            stock_headers = list(stock_data[0].keys())
+        else:
+            stock_headers = []
+        return templates.TemplateResponse("/stock_page/stocks.html", {"request": request, "stock_data": stock_data, "stock_headers": stock_headers})
     else:
         raise(HTTPException(status_code=res.status_code, detail="Error"))
 class Stock(BaseModel):
@@ -75,7 +79,8 @@ class Stock(BaseModel):
     shares: int
     symbol: str
     asset_class: Optional[str]
-@app.put("/stock/update")
+
+@app.put("/portfolio/update")
 async def updateStock(stock: Stock, response_model=Stock):
     print(stock.dict())
     res = requests.put(f'http://{server_host_address}/updateStock', json=stock.dict())
