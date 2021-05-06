@@ -73,14 +73,15 @@ def getPortfolio():
 
 @app.get("/getFunds")
 def getFunds():
-    data = db.fetch_funds()
-    columns = db.getColumnNames('funds')
-    return {"data": data, "columns": columns}
+    data = db.fetch_funds()[0][0]
+    performance = db.fetch_portfolio_performance("is_fund=TRUE")[0][0]
+    return {"data": data, "performance": performance}
 
 @app.get("/getStocks")
 def getStocks():
     data = db.fetch_stocks()[0][0] #for some reason the result is way nested
-    return {"data": data}
+    performance = db.fetch_portfolio_performance("is_fund=FALSE")[0][0]
+    return {"data": data, "performance": performance}
 
 @app.get("/doRefresh")
 # I'm using fastAPI exactly like this, combining concurrent.futures.ProcessPoolExecutor() 

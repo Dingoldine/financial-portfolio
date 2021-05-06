@@ -1,3 +1,25 @@
+h1, h2, h3, h4, h5, h6 {
+  padding: 10px;
+  text-align: center;
+  font-family: "IBM Plex Mono","Menlo","DejaVu Sans Mono","Bitstream Vera Sans Mono",Courier,monospace;
+  -webkit-font-smoothing: antialiased;
+  text-transform: uppercase;
+  letter-spacing: 0.125em;
+  vertical-align: baseline;
+  color: #525252;
+  font-weight: 400;
+}
+
+
+.main-header {
+  font-size: 1.75em;
+  padding: 70px 0 0 0;
+  
+}
+
+.sub-header {
+  font-size: 1.5em;
+} 
 
 .thead-dark {
     background: #1c1d1d4a;
@@ -9,7 +31,10 @@
   .editable_cell {
     display:inline;
   }
-  
+ 
+  #area {
+    position: relative;
+  }
   .tooltip {
     opacity: 0.7;
     background-color: black;
@@ -24,7 +49,6 @@
   }
   .treemap-rect {
     stroke: black;
-    fill: slateblue;
   }
   .treemap-rect-values {
     font-size: 11px;
@@ -41,6 +65,11 @@
     transform: translate(0, 0);
   }
 
+  .treemap-svg {
+    max-width: 100%;
+    min-width: 80%;
+    min-height: 80%;
+  }
 
   .table-wrapper {
     text-align: center;
@@ -50,9 +79,13 @@
     max-width: -moz-fit-content;
     margin: auto;
   }
-  
+  table tr:hover {
+    background: rgba(131, 101, 251, 0.1) !important;
+    color: rgb(53, 173, 216);
+  }
+
   .donut-wrapper {
-    padding: 5em !important;
+    padding: 1em !important;
   }
   
   .dataTables_scrollHeadInner {
@@ -60,7 +93,7 @@
   }
   .graph-wrapper {
     width: -moz-fit-content;
-    padding: 10px;
+    padding: 1em;
     margin: auto;
     min-width: 80%;
   }

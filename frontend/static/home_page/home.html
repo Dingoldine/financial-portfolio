@@ -3,30 +3,33 @@
 {% set active_page = 'Home' %}
 {% block content %}
 <link rel="stylesheet" href="../static/home_page/home.css" type="text/css" />
-<div class="row justify-content-left">
-  <div class="col-md-7">
+<h1 class="main-header">Portfolio Breakdown</h1>
+<section class="row justify-content-left">
+  <article class="col-lg-7">
     <div class="graph-wrapper">
       <div id="treemap"></div>
     </div>
-  </div>
-  <div class="col-md-5 align-self-center">
+  </article>
+  <article class="col-lg-5 align-self-center">
     <div class="graph-wrapper donut-wrapper">
       <div id="donut"></div>
     </div>
-  </div>
-</div>
-<div class="row justify-content-center">
-  <div class="col-md-10">
+  </article>
+</section>
+<h2 class="sub-header">Performance</h2>
+<section class="row justify-content-center">
+  <article class="col-md-10">
     <div class="graph-wrapper">
       <div id="area"></div>
     </div>
-  </div>
-</div>
-<div class="row justify-content-center">
-  <div class="col-md-12">
+  </article>
+</section>
+<section class="row justify-content-center">
+  <h2 class="sub-header">Details</h2>
+  <article class="col-md-12">
     <div class="table-wrapper">
-      <table id="portfolio-table" class="table display nowrap compact"
-      data-order='[[ 0, "asc" ]]' data-page-length='25'>
+      <table class="data-table table display nowrap compact" data-order='[[ 0, "asc" ]]'
+        data-page-length='25'>
         <thead class="thead-dark" border=0>
           {% for key in portfolio_data[0]  %}
           <th scope="col" class=""> {{key}} </td>
@@ -36,24 +39,23 @@
           {% for portfolio in portfolio_data %}
           <tr>
             {% for key in portfolio %}
-              {% if key == "asset_class" %}
-                <td contenteditable class="editable-cell">{{portfolio[key]}}</td>
-              {% else %}
-                <td nowrap> {{portfolio[key]}} </td>
-              {% endif %}      
+            {% if key == "asset_class" %}
+            <td contenteditable class="editable-cell">{{portfolio[key]}}</td>
+            {% else %}
+            <td nowrap> {{portfolio[key]}} </td>
+            {% endif %}
             {% endfor %}
           </tr>
           {% endfor %}
         </tbody>
       </table>
     </div>
-  </div>
-</div>
+  </article>
+</section>
 <script type="text/javascript">
-
   const data = {{ portfolio_data | tojson }};
 
-  if(!data.length){
+  if (!data.length) {
     console.log("HANDLE EMPTY")
     throw new Error("Stop script");
   }
@@ -64,40 +66,53 @@
 
   const build_treemap = () => {
     // set the dimensions and margins of the graph
-    const margin = {top: 10, right: 10, bottom: 10, left: 10},
-    width = 800 - margin.left - margin.right,
-    height = 800 - margin.top - margin.bottom;
+    const margin = {
+        top: 10,
+        right: 50,
+        bottom: 10,
+        left: 0
+      },
+      width = 950 - margin.left - margin.right,
+      height = 880 - margin.top - margin.bottom;
 
     // And a opacity scale
     const opacity = d3.scaleLinear()
       .domain([10, 30])
-      .range([.5,1])
+      .range([.5, 1])
 
     // creating group 
     const groupByAssetClass = d3.group(data, d => d.asset_class)
 
+    function vh(v) {
+      const h = Math.max(document.documentElement.clientHeight, window.innerHeight || 0);
+      return (v * h) / 100;
+    }
+
     // append the svg object to the body of the page
     const svg = d3.select("#treemap")
-    .append("svg")
-    .attr("viewBox", `0 0 ${width} ${height}`)
-    .append("g")
-    .attr("transform",
-          "translate(" + margin.left + "," + margin.top + ")")
+      .append("svg")
+      .attr('class', 'treemap-svg')
+      .attr("viewBox", `0 0 ${width} ${height}`)
+      .append("g")
+      .attr("transform",
+        "translate(" + margin.left + "," + margin.top + ")")
     // Give the data to this cluster layout:
-    const root = d3.hierarchy(groupByAssetClass).sum(function(d){ return d.weight}) // Here the size of each leave is given in the 'value' field in input data
+    const root = d3.hierarchy(groupByAssetClass).sum(function (d) {
+      return d.weight
+    }) // Here the size of each leave is given in the 'value' field in input data
 
     // Then d3.treemap computes the position of each element of the hierarchy
     d3.treemap()
-    .size([width, height])
-    .paddingInner(3)      // Padding between each rectangle
-    .paddingOuter(18)
-    .paddingRight(0)
-      //.padding(20)
+      .size([width, height])
+      .paddingInner(3) // Padding between each rectangle
+      .paddingOuter(20)
+      .paddingRight(10)
+    //.padding(20)
     (root)
 
     // div for on hover effect
     const tooltipdiv = d3.select("body").append("div")
-     .attr("class", "tooltip")
+      .attr("class", "tooltip")
 
     // use this information to add rectangles:
     svg
@@ -105,101 +120,153 @@
       .data(root.leaves())
       .enter()
       .append("rect")
-        .attr('x', function (d) { return d.x0; })
-        .attr('y', function (d) { return d.y0; })
-        .attr('width', function (d) { return d.x1 - d.x0; })
-        .attr('height', function (d) { return d.y1 - d.y0; })
-        .attr("class", "treemap-rect")
-        .style("opacity", function(d){ return opacity(d.data.weight * 200)})
-              //Makes the div appear on hover
-      .on('mouseover', function(event, d) {
-          d3.select(this).transition()
-              .duration(200)
-          
-          tooltipdiv.html(`${d.data.asset}<br>${Math.round(d.data.market_value_sek)} SEK`)
-               .style("left", (event.pageX + 10) + "px")
-               .style("top", (event.pageY - 15) + "px");
-          
-          tooltipdiv.transition()
-            .duration(50)
-            .style("opacity", 1);
+      .attr('x', function (d) {
+        return d.x0;
+      })
+      .attr('y', function (d) {
+        return d.y0;
+      })
+      .attr('width', function (d) {
+        return d.x1 - d.x0;
+      })
+      .attr('height', function (d) {
+        return d.y1 - d.y0;
+      })
+      .attr("class", "treemap-rect")
+      .style("opacity", function (d) {
+        return opacity(d.data.weight * 200)
+      })
+      .style("fill", function (d) {
+        if (d.data.change < 0) return 'red';
+        return 'green'
+      })
+      //Makes the div appear on hover
+      .on('mouseover', function (event, d) {
+        d3.select(this).transition()
+          .duration(200)
+
+        tooltipdiv.html(`${d.data.asset}<br>${Math.round(d.data.market_value_sek)} SEK`)
+          .style("left", (event.pageX + 10) + "px")
+          .style("top", (event.pageY - 15) + "px");
+
+        tooltipdiv.transition()
+          .duration(50)
+          .style("opacity", 1);
       })
       //Makes the div disappear
       .on('mouseout', function (d, i) {
 
-            tooltipdiv.transition()
-              .duration(50)
-              .style("opacity", 0);
+        tooltipdiv.transition()
+          .duration(50)
+          .style("opacity", 0);
       })
 
     // Add the text labels
     svg
-        .selectAll("text")
-        .data(root.leaves())
-        .enter()
-        .append("text")
-          .attr("class", 'treemap-rect-symbol')
-          .attr("x", function(d){ return d.x0+5})    // +10 to adjust position (more right)
-          .attr("y", function(d){ return d.y0+20})    // +20 to adjust position (lower)
-          .text(function(d){ return d.data.symbol })
-    
+      .selectAll("text")
+      .data(root.leaves())
+      .enter()
+      .append("text")
+      .attr("class", 'treemap-rect-symbol')
+      .attr("x", function (d) {
+        return d.x0 + 5
+      }) // +10 to adjust position (more right)
+      .attr("y", function (d) {
+        return d.y0 + 20
+      }) // +20 to adjust position (lower)
+      .text(function (d) {
+        return d.data.symbol
+      })
+      .style("display", (d, idx) => {
+        const parentWidth = (d.x1 - d.x0)
+        const parentHeight = (d.y1 - d.y0)
+
+        if (parentWidth < 40 || parentHeight < 20) return "none";
+        return "";
+      });
     // add rectangle values
     svg
       .selectAll("vals")
       .data(root.leaves())
       .enter()
       .append("text")
-        .attr("class", 'treemap-rect-values')
-        .attr("x", function(d){ return d.x0 + ((d.x1 - d.x0) / 2) - 12})    // +10 to adjust position (more right)
-        .attr("y", function(d){ return d.y0 + ((d.y1 - d.y0) / 2) })    // +20 to adjust position (lower)
-        .text(function(d){ return `${(d.data.weight * 100).toFixed(2)}%` })
-        .attr("font-size", "11px")
-        .attr("fill", "white")
+      .attr("class", 'treemap-rect-values')
+      .attr("x", function (d) {
+        return d.x0 + ((d.x1 - d.x0) / 2) - 12
+      }) // +10 to adjust position (more right)
+      .attr("y", function (d) {
+        return d.y0 + ((d.y1 - d.y0) / 2) + 5
+      }) // +20 to adjust position (lower)
+      .text(function (d) {
+        return `${(d.data.weight * 100).toFixed(2)}%`
+      })
+      .style("display", (d, idx) => {
+        const parentWidth = (d.x1 - d.x0)
+        const parentHeight = (d.y1 - d.y0)
+
+        if (parentWidth < 34 || parentHeight < 12.5) return "none";
+        return "";
+      });
 
     // Add group headings
     const titles = svg
       .selectAll("titles")
-      .data(root.descendants().filter(function(d){return d.depth==1}))
+      .data(root.descendants().filter(function (d) {
+        return d.depth == 1
+      }))
       .enter()
       .append("text")
-        .attr('class', 'treemap-group-headings')
-        .attr("x", function(d){ return d.x0 + 15})
-        .attr("y", function(d){ return d.y0 - 8 })
-      
-      titles
+      .attr('class', 'treemap-group-headings')
+      .attr("x", function (d) {
+        return d.x0 + 15
+      })
+      .attr("y", function (d) {
+        return d.y0 - 8
+      })
+
+    titles
       .append('tspan')
-        .attr('x', function(d) {return d.x0 + 15})
-        .attr('dy', 0)
-        .text(function(d) { return d.data[0] })
-    
-      titles
+      .attr('x', function (d) {
+        return d.x0 + 18
+      })
+      .attr('dy', 0)
+      .text(function (d) {
+        return d.data[0]
+      })
+
+    titles
       .append('tspan')
-        .attr('x', function(d) { return d.x0 + 15 })
-        .attr('dy',  20 )
-        .text(function(d) { return `${(d.value * 100).toFixed(2)}%` })
-   
+      .attr('x', function (d) {
+        return d.x0 + 18
+      })
+      .attr('dy', 20)
+      .text(function (d) {
+        return `${(d.value * 100).toFixed(2)}%`
+      })
+
   };
 
   const build_donut_chart = () => {
 
     // creating group 
-    const groupByCurrency = d3.rollup(data,  v => d3.sum(v, (g) => {return g.market_value_sek } ), d => d.currency)
-    console.log(groupByCurrency)
+    const groupByCurrency = d3.rollup(data, v => d3.sum(v, (g) => {
+      return g.market_value_sek
+    }), d => d.currency)
+
     // set the dimensions and margins of the graph
-    const width = 450
-        height = 450
-        margin = 40
+    const width = 880,
+      height = 880,
+      margin = 40
 
     // The radius of the pieplot is half the width or half the height (smallest one). I subtract a bit of margin.
     const radius = Math.min(width, height) / 2 - margin
 
-    // append the svg object to the div called 'my_dataviz'
+    // append the svg object to the div called 'donut'
     const svg = d3.select("#donut")
       .append("svg")
-        .attr("width", width)
-        .attr("height", height)
+      .attr("viewBox", `0 0 ${width} ${height}`)
       .append("g")
-        .attr("transform", "translate(" + width / 2 + "," + height / 2 + ")");
+      .attr("transform", "translate(" + width / 2 + "," + height / 2 + ")");
 
     // set the color scale
     const color = d3.scaleOrdinal()
@@ -209,23 +276,25 @@
     // Compute the position of each group on the pie:
     const pie = d3.pie()
       .sort(null) // Do not sort group by size
-      .value(function(d) {
-        return d[1]; })
+      .value(function (d) {
+        return d[1];
+      })
 
     const data_ready = pie(groupByCurrency.entries())
     // The arc generator
     const arc = d3.arc()
-      .innerRadius(radius * 0.5)         // This is the size of the donut hole
+      .innerRadius(radius * 0.5) // This is the size of the donut hole
       .outerRadius(radius * 0.8)
 
     // Another arc that won't be drawn. Just for labels positioning
     const outerArc = d3.arc()
-      .innerRadius(radius * 0.9)
-      .outerRadius(radius * 0.9)
+      .innerRadius(radius * 0.99)
+      .outerRadius(radius * 0.99)
 
     // div to show on hover 
     const tooltipdiv = d3.select("body").append("div")
-     .attr("class", "tooltip")
+      .attr("class", "tooltip")
+
     // Build the pie chart: Basically, each part of the pie is a path that we build using the arc function.
     svg
       .selectAll('allSlices')
@@ -233,34 +302,36 @@
       .enter()
       .append('path')
       .attr('d', arc)
-      .attr('fill', function(d){ return(color(d.data[0])) })
+      .attr('fill', function (d) {
+        return (color(d.data[0]))
+      })
       .attr("stroke", "white")
       .style("stroke-width", "2px")
       .style("opacity", 0.8)
       .attr('transform', 'translate(0, 0)')
       //Makes the div appear on hover
-      .on('mouseover', function(event, d) {
-          d3.select(this).transition()
-              .duration(200)
-              .style('opacity', 0.7)
-              .style('transform', 'scale(1.03)')
-          tooltipdiv.html(`${Math.round(d.value)} SEK`)
-               .style("left", (event.pageX + 10) + "px")
-               .style("top", (event.pageY - 15) + "px");
-          
-          tooltipdiv.transition()
-            .duration(200)
-            .style("opacity", 1);
+      .on('mouseover', function (event, d) {
+        d3.select(this).transition()
+          .duration(200)
+          .style('opacity', 0.7)
+          .style('transform', 'scale(1.03)')
+        tooltipdiv.html(`${Math.round(d.value)} SEK`)
+          .style("left", (event.pageX + 10) + "px")
+          .style("top", (event.pageY - 15) + "px");
+
+        tooltipdiv.transition()
+          .duration(200)
+          .style("opacity", 1);
       })
       //Makes the div disappear
       .on('mouseout', function (d, i) {
-          d3.select(this).transition()
-              .duration('200')
-              .style('opacity', 0.8)
-              .style('transform', 'scale(1.0)')
-          tooltipdiv.transition()
-            .duration(200)
-            .style("opacity", 0);
+        d3.select(this).transition()
+          .duration('200')
+          .style('opacity', 0.8)
+          .style('transform', 'scale(1.0)')
+        tooltipdiv.transition()
+          .duration(200)
+          .style("opacity", 0);
       })
 
     // Add the polylines between chart and labels:
@@ -269,17 +340,20 @@
       .data(data_ready)
       .enter()
       .append('polyline')
-        .attr("stroke", "black")
-        .style("fill", "none")
-        .attr("stroke-width", 1)
-        .attr('points', function(d) {
-          const posA = arc.centroid(d) // line insertion in the slice
-          const posB = outerArc.centroid(d) // line break: we use the other arc generator that has been built only for that
-          const posC = outerArc.centroid(d); // Label position = almost the same as posB
-          const midangle = d.startAngle + (d.endAngle - d.startAngle) / 2 // we need the angle to see if the X position will be at the extreme right or extreme left
-          posC[0] = radius * 0.95 * (midangle < Math.PI ? 1 : -1); // multiply by 1 or -1 to put it on the right or on the left
-          return [posA, posB, posC]
-        })
+      .attr("stroke", "grey")
+      .style("fill", "none")
+      .attr("stroke-width", 1)
+      .attr('points', function (d) {
+        const posA = arc.centroid(d) // line insertion in the slice
+        const posB = outerArc.centroid(
+          d) // line break: we use the other arc generator that has been built only for that
+        const posC = outerArc.centroid(d); // Label position = almost the same as posB
+        const midangle = d.startAngle + (d.endAngle - d.startAngle) /
+          2 // we need the angle to see if the X position will be at the extreme right or extreme left
+        posC[0] = radius * 0.95 * (midangle < Math.PI ? 1 : -
+        1); // multiply by 1 or -1 to put it on the right or on the left
+        return [posA, posB, posC]
+      })
 
     // Add the polylines between chart and labels:
     svg
@@ -287,335 +361,224 @@
       .data(data_ready)
       .enter()
       .append('text')
-        .text( function(d) { return d.data[0] } )
-        .attr('transform', function(d) {
-            const pos = outerArc.centroid(d);
-            const midangle = d.startAngle + (d.endAngle - d.startAngle) / 2
-            pos[0] = radius * 0.99 * (midangle < Math.PI ? 1 : -1);
-            return 'translate(' + pos + ')';
-        })
-        .style('text-anchor', function(d) {
-            const midangle = d.startAngle + (d.endAngle - d.startAngle) / 2
-            return (midangle < Math.PI ? 'start' : 'end')
-        });
-      };
+      .text(function (d) {
+        return d.data[0]
+      })
+      .attr('transform', function (d) {
+        const pos = outerArc.centroid(d);
+        const midangle = d.startAngle + (d.endAngle - d.startAngle) / 2
+        pos[0] = radius * 0.96 * (midangle < Math.PI ? 1 : -1);
+        return 'translate(' + pos + ')';
+      })
+      .attr("dy", 4)
+      .style('text-anchor', function (d) {
+        const midangle = d.startAngle + (d.endAngle - d.startAngle) / 2
+        return (midangle < Math.PI ? 'start' : 'end')
+      })
+      .attr('fill', 'grey');
+  };
 
+  const build_stacked_area_chart = () => {
+    // format data
+    const keys = Array.from(d3.group(portfolio_performance, d => d.asset_class).keys())
+    const values = Array.from(d3.rollup(portfolio_performance, ([d]) => d.total, d => d.dt, d => d.asset_class))
 
-      const build_area_chart = () => {
-        // create data
-        const d_test = [{x: new Date("2021-01-01"), y: 20}, {x: new Date("2021-02-01"), y: 150}, {x: new Date("2021-03-01"), y: 100}, {x: new Date("2021-04-01"), y: 20}, {x: new Date("2021-05-01"), y: 130}]
-        const d_test2 = [{x: new Date("2021-01-01"), y: 123}, {x: new Date("2021-02-01"), y: 31}, {x: new Date("2021-03-01"), y: 150}, {x: new Date("2021-04-01"), y: 20}, {x: new Date("2021-05-01"), y: 162}]
+    const series = d3.stack()
+      .keys(keys)
+      .value(([, values], key) => values.get(key))
+      .order(d3.stackOrderNone)
+      (values)
 
-        // set the dimensions and margins of the graph
-        const margin = {top: 10, right: 30, bottom: 30, left: 50},
-            width = 800 - margin.left - margin.right,
-            height = 400 - margin.top - margin.bottom;
+    // set the dimensions and margins of the graph
+    const margin = {
+        top: 10,
+        right: 60,
+        bottom: 80,
+        left: 60
+      },
+      width = 800,
+      height = 400
 
-        // append the svg object to the body of the page
-        const svg = d3.select("#area")
-          .append("svg")
-          .attr("viewBox", `0 0 ${width} ${height}`)
-          .append("g")
-          .attr("transform",
-                "translate(" + margin.left + "," + margin.top + ")");
-        
-        // Add X axis --> it is a date format
-        const x = d3.scaleTime()
-          .domain(d3.extent(d_test, function(d) { return d.x; }))
-          .range([ 0, width ]);
+    // append the svg object to the body of the page
+    const svg = d3.select("#area")
+      .append("svg")
+      .attr("viewBox", `0 0 ${width} ${height}`)
+      .append("g")
+      .attr("transform",
+        "translate(" + margin.left + "," + margin.top + ")");
 
-            svg.append("g")
-              .attr("transform", "translate(0," + height + ")")
-              .call(d3.axisBottom(x));
+    // Add X axis --> it is a date format
+    const x = d3.scaleTime()
+      .domain(d3.extent(portfolio_performance, function (d) {
+        return new Date(d.dt);
+      }))
+      .range([0, width - margin.left]);
 
-          // Add Y axis
-          const y = d3.scaleLinear()
-                .domain([0, d3.max(d_test, function(d) { return +d.y; })])
-                .range([ height, 0 ]);
-          
-          svg.append("g")
-            .call(d3.axisLeft(y))
+    svg.append("g")
+      .classed("x-axis", true)
+      .attr("transform", `translate(0, ${height - margin.bottom})`)
+      .call(d3.axisBottom(x)
+        .tickFormat(d3.timeFormat("%m-%d"))
+        .ticks().tickSizeOuter(0)
+        .tickValues(values.map(function (d) {
+          return new Date(d[0])
+        })))
+      .selectAll("text")
+      .style("text-anchor", "end")
+      .attr("dx", "-2.1em")
+      .attr("dy", ".15em")
+      .attr("transform", "rotate(-65)");
 
-          // Add the area
-          svg.append("path")
-            .datum(d_test)
-            .attr("fill", "#cce5df")
-            .attr("stroke", "#69b3a2")
-            .attr("stroke-width", 1.5)
-            .attr("d", d3.area()
-              .x(function(d) { 
-                return x(d.x) })
-              .y0(y(0))
-              .y1(function(d) { return y(d.y) })
-              )
-              .attr("opacity", '0.4')
-        
-              // Add the area
-              svg.append("path")
-            .datum(d_test2)
-            .attr("fill", "blue")
-            .attr("stroke", "#69b3a2")
-            .attr("stroke-width", 1.5)
-            .attr("d", d3.area()
-              .x(function(d) { 
-                return x(d.x) })
-              .y0(y(0))
-              .y1(function(d) { return y(d.y) })
-              )
-            .attr("opacity", '0.4')
-        };
+    // Add Y axis
+    const y = d3.scaleLinear()
+      .domain([0, d3.max(series, d => d3.max(d, d => d[1]))]).nice()
+      .range([height - margin.bottom, margin.top])
 
-      const build_stacked_area_chart = () => {
-        // format data
-        const keys =  Array.from(d3.group(portfolio_performance, d => d.asset_class).keys())
-        const values = Array.from(d3.rollup(portfolio_performance, ([d]) => d.total, d => d.dt, d => d.asset_class))
-       
-        // console.log(keys, values)
+    svg.append("g")
+      .classed("y-axis", true)
+      .call(d3.axisLeft(y))
 
-        const series = d3.stack()
-        .keys(keys)
-        .value(([, values], key) => values.get(key))
-        .order(d3.stackOrderNone)
-        (values)
+    // add areas
+    const color = d3.scaleOrdinal()
+      .domain(keys)
+      .range(d3.schemeCategory10)
 
-        console.log(series)
-       
-        // set the dimensions and margins of the graph
-        const margin = {top: 10, right: 60, bottom: 80, left: 60},
-        width = 800,
-        height = 400
+    const area = d3.area()
+      .x(d => x(d.data[0]))
+      .y0(d => y(d[0]))
+      .y1(d => y(d[1]))
 
-        // append the svg object to the body of the page
-        const svg = d3.select("#area")
-          .append("svg")
-          .attr("viewBox", `0 0 ${width} ${height}`)
-          .append("g")
-          .attr("transform",
-                "translate(" + margin.left + "," + margin.top + ")");
-        
-        // Add X axis --> it is a date format
-        const x = d3.scaleTime()
-          .domain(d3.extent(portfolio_performance, function(d) { return new Date(d.dt); }))
-          .range([ 2, width - margin.left ]);
-
-        svg.append("g")
-          .classed("x-axis", true)
-          .attr("transform", `translate(0, ${height - margin.bottom})`)
-          .call(d3.axisBottom(x)
-            .tickFormat(d3.timeFormat("%m-%d"))
-            .ticks().tickSizeOuter(0)
-            .tickValues(values.map(function(d) { return new Date(d[0]) }) ))
-            .selectAll("text")  
-              .style("text-anchor", "end")
-              .attr("dx", "-2.1em")
-              .attr("dy", ".15em")
-              .attr("transform", "rotate(-65)");  
-         // Add Y axis
-        const y = d3.scaleLinear()
-          .domain([0, d3.max(series, d => d3.max(d, d => d[1]))]).nice()
-          .range([height - margin.bottom, margin.top])
-        
-        svg.append("g")
-          .classed("y-axis", true)
-          .call(d3.axisLeft(y))
-
-
-        const color = d3.scaleOrdinal()
-          .domain(keys)
-          .range(d3.schemeCategory10)
-
-        const area = d3.area()
-          .x(d => x(d.data[0]))
-          .y0(d => y(d[0]))
-          .y1(d => y(d[1]))
-
-          //  // Add the area
-          //  svg.append("path")
-          //   .datum(test_data)
-          //   .attr("fill", "blue")
-          //   .attr("stroke", "#69b3a2")
-          //   .attr("stroke-width", 1.5)
-          //   .attr("d", d3.area()
-          //     .x(function(d) { 
-          //       console.log(d)
-          //       return x(new Date(d.data[0])) })
-          //     .y0(d => y(d[0]))
-          //     .y1(function(d) { return y(d[1]) })
-          //     )
-          //   .attr("opacity", '0.4')
-
-          svg
-          .selectAll("mylayers")
-          .data(series)
-            .enter()
-            .append("path")
-              .style("fill", function(d) { console.log(d.key) ; return color(d.key); })
-              .attr("stroke", "#69b3a2")
-              .attr("stroke-width", 1.5)
-              .attr("d", d3.area()
-              .x(d => x(new Date(d.data[0])))
-              .y0(d => y(d[0]))
-              .y1(d => y(d[1])))
-              .attr("opacity", '0.7')
-    
-          // svg
-          // .selectAll("path")
-          //   .data(series)
-          //   .enter()
-          //   .join("path")
-          //   .attr("fill", ({key}) => {color(key)})
-          //   .attr("opacity", '0.4')
-          //   .attr("d", area)
-          //   .append("title")
-          //     .text(({key}) => key);
-
-          // // Add the area
-          // svg.append("path")
-          //   .datum(d_test)
-          //   .attr("fill", "#cce5df")
-          //   .attr("stroke", "#69b3a2")
-          //   .attr("stroke-width", 1.5)
-          //   .attr("d", d3.area()
-          //     .x(function(d) { 
-          //       return x(d.x) })
-          //     .y0(y(0))
-          //     .y1(function(d) { return y(d.y) })
-          //     )
-          //     .attr("opacity", '0.4')
-              
-            //   // Add the area
-            //   svg.append("path")
-            // .datum(d_test2)
-            // .attr("fill", "blue")
-            // .attr("stroke", "#69b3a2")
-            // .attr("stroke-width", 1.5)
-            // .attr("d", d3.area()
-            //   .x(function(d) { 
-            //     return x(d.x) })
-            //   .y0(y(0))
-            //   .y1(function(d) { return y(d.y) })
-            //   )
-            // .attr("opacity", '0.4')
-
-
-        // define colors
-      /*   const color = d3.scaleOrdinal()
-        .domain(keys)
-        .range(d3.schemeCategory10)
-        
-        // Add X axis --> it is a date format
-       const x = d3.scaleTime()
-        .domain(d3.extent(portfolio_performance, d => d.dt))
-        .range([margin.left, width - margin.right])
-
-        // Add Y axis
-
-        const area = d3.area()
-        .x(d => x(d.data[0]))
+    const layers = svg
+      .selectAll("mylayers")
+      .data(series)
+      .enter()
+      .append("path")
+      .style("fill", function (d) {
+        return color(d.key);
+      })
+      .attr("d", d3.area()
+        .x(d => x(new Date(d.data[0])))
         .y0(d => y(d[0]))
-        .y1(d => y(d[1]))
+        .y1(d => y(d[1])))
+      .attr("opacity", 0.4)
 
-        
- 
-        // append the svg object to the body of the page
-        const svg = d3.select("#area")
-          .append("svg")
-          .attr("viewBox", `0 0 ${width} ${height}`)
-          .append("g")
-          .selectAll("path")
-          .data(series)
-          .join("path")
-            .attr("fill", ({key}) => color(key))
-            .attr("d", area)
-          .append("title")
-            .text(({key}) => key);
-        
-           xAxis = g => g
-            .attr("transform", `translate(0,${height - margin.bottom})`)
-            .call(d3.axisBottom(x).ticks(width / 80).tickSizeOuter(0))
-            
-           yAxis = g => g
-            .attr("transform", `translate(${margin.left},0)`)
-            .call(d3.axisLeft(y))
-            .call(g => g.select(".domain").remove())
-            .call(g => g.select(".tick:last-of-type text").clone()
-                .attr("x", 3)
-                .attr("text-anchor", "start")
-                .attr("font-weight", "bold")
-                .text(data.y))
+    layers
+      .append("title")
+      .text(({
+        key
+      }) => key)
 
-          svg.append("g")
-              .call(xAxis);
+    const lines = svg
+      .selectAll("myLines")
+      .data(series)
+      .enter()
+      .append("path")
+      .attr('id', function (d) {
+        return 'line-' + d.key
+      })
+      .attr("stroke", function (d) {
+        return color(d.key);
+      })
+      .attr("fill", "none")
+      .attr("stroke-width", 1.5)
+      .attr("d", d3.line()
+        .x(function (d) {
+          return x(new Date(d.data[0]))
+        })
+        .y(function (d) {
+          return y(d[1])
+        })
+      )
+      .style('opacity', 0.7)
 
-          svg.append("g")
-              .call(yAxis);
+    layers
+      .on('mouseover', function (event, d) {
+        layers.style('opacity', 0.1) // remove focus from other layers
+        lines.style('opacity', 0.1)
+        const target_area = d3.select(this)
+        target_area.transition().duration(200)
+        const corresponding_line = d3.select('#line-' + d.key)
+        corresponding_line.style('opacity', 0.7)
+        target_area.style('opacity', 0.7) // turn layer in focus
+      })
+      .on('mouseout', function (event, d) {
+        layers.style('opacity', 0.4)
+        lines.style('opacity', 0.7)
+        // reset opacity
+      })
 
-          // Add the area
-          svg
-          .selectAll("path")
-            .data(series)
-            .join("path")
-            .attr("fill", ({key}) => {color(key)})
-            .attr("opacity", '0.4')
-            .attr("d", area)
-            .append("title")
-              .text(({key}) => key);
-     */
-       
-        
-        };
+    const vertical = svg
+      .append("path")
 
-  $(document).ready( function() {
+    vertical
+      .attr("class", "remove")
+      .attr("stroke", '#fff')
+      .attr('stroke-width', '3px')
+      .attr('pointer-events', 'none')
+      .style("opacity", "0.5")
+
+    svg
+      .on("mousemove", function (event, d) {
+        const mousex = d3.pointer(event, svg.node());
+        vertical.style("display", null).attr("d", function () {
+          let d = "M" + mousex[0] + "," + (height);
+          d += " " + mousex[0] + "," + '10px';
+          return d;
+        });
+
+      })
+      .on("mouseout", function () {
+        vertical.style("display", "none")
+      });
+  };
+
+  $(document).ready(function () {
 
     $('body')
-    .on('focus', '[contenteditable]', function() {
+      .on('focus', '[contenteditable]', function () {
         const $this = $(this);
         $this.data('before', $this.html());
-    })
-    .on('keypress paste input', '[contenteditable]', function(event) {
+      })
+      .on('keypress paste input', '[contenteditable]', function (event) {
         const $this = $(this);
         // On enter key
         if (event.keyCode === 10 || event.keyCode === 13) {
           event.preventDefault();
-          console.log('enter key pressed')
           $this.blur();
         }
-    })
-    .on('submit', '[contenteditable]', function(event) {
-      //const rowIndex = event.currentTarget.parentElement.rowIndex - 1
-      //console.log(rowIndex)
-
-      const updatedportfolioRow = Array.from(event.currentTarget.parentElement.cells).map(function(el){
-        const content  = el.innerHTML.trim().replace("<br>", "" );
-        const isNumber = parseFloat(content)
-        return (isNumber) ?  isNumber : content   
       })
-      console.log(updatedportfolioRow, data_headers)
-      let payload = {}
-      for (let i = 0; i < data_headers.length; i++) {
-        payload[data_headers[i]] = updatedportfolioRow[i]
-      }
-      console.log(payload)
-      $.ajax({
-        type: "PUT",
-        url: '/portfolio/update',
-        data: JSON.stringify(payload),
-        success: function(d, status) {
-          console.log(d, status)
-        },
-        dataType: 'application/json'
-      });
-    })
-    .on('focusout', '[contenteditable]', function(){
-      const $this = $(this);
-      if ($this.data('before') !== $this.html()) {
+      .on('submit', '[contenteditable]', function (event) {
+
+        const updatedportfolioRow = Array.from(event.currentTarget.parentElement.cells).map(function (el) {
+          const content = el.innerHTML.trim().replace("<br>", "");
+          const isNumber = parseFloat(content)
+          return (isNumber) ? isNumber : content
+        })
+        let payload = {}
+        for (let i = 0; i < data_headers.length; i++) {
+          payload[data_headers[i]] = updatedportfolioRow[i]
+        }
+        console.log(payload)
+        $.ajax({
+          type: "PUT",
+          url: '/portfolio/update',
+          data: JSON.stringify(payload),
+          success: function (d, status) {
+            console.log(d, status)
+          },
+          dataType: 'application/json'
+        });
+      })
+      .on('focusout', '[contenteditable]', function () {
+        const $this = $(this);
+        if ($this.data('before') !== $this.html()) {
           $this.data('before', $this.html());
           $this.trigger('submit');
-      }
-    })
+        }
+      })
 
 
-    $('#portfolio-table').DataTable({
+    $('.data-table').DataTable({
       "scrollX": true
     });
 
@@ -628,4 +591,5 @@
   });
 </script>
 {% endblock %}
+
 </html>

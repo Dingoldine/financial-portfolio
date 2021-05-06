@@ -187,27 +187,49 @@ class Database:
         
     def fetch_stocks(self):
         try:
- 
-            selectList = "asset, shares, ROUND(cast(purchase_price as numeric),2) AS purchase_price, ROUND(cast(latest_price as numeric),2) AS latest_price, ROUND(cast(market_value_sek as numeric),2) AS market_value_sek, ROUND(cast(change as numeric),4) AS change, currency, isin, symbol, ROUND(cast(weight as numeric),4) AS weight, asset_class"
-            self.cursor.execute(f"SELECT coalesce(JSON_AGG(t), NULL) FROM (SELECT {selectList} FROM (SELECT DISTINCT ON (asset) * FROM portfolio ORDER BY asset, dt DESC) AS p WHERE is_fund='FALSE') as t;")
+            selectList = "*"
+            query = f"""
+            SELECT
+                coalesce(JSON_AGG(t), NULL)
+            FROM ( SELECT DISTINCT ON (asset)
+                    {selectList}
+                FROM
+                    portfolio
+                WHERE is_fund=FALSE
+                ORDER BY
+                    asset,
+                    dt DESC) AS t; """
+            self.cursor.execute(query)
             self.commit()
-
             result = self.cursor.fetchall()
             if (result[0][0]): return result
             else: return [[[]]]
-
         except:
             self.connection.rollback()
-            raise
+            raise  
 
     def fetch_funds(self):
         try:
-            self.cursor.execute("SELECT * FROM portfolio WHERE is_fund='TRUE'")
+            selectList = "*"
+            query = f"""
+            SELECT
+                coalesce(JSON_AGG(t), NULL)
+            FROM ( SELECT DISTINCT ON (asset)
+                    {selectList}
+                FROM
+                    portfolio
+                WHERE is_fund=TRUE
+                ORDER BY
+                    asset,
+                    dt DESC) AS t; """
+            self.cursor.execute(query)
             self.commit()
-            return self.cursor.fetchall()
+            result = self.cursor.fetchall()
+            if (result[0][0]): return result
+            else: return [[[]]]
         except:
             self.connection.rollback()
-            raise
+            raise    
 
 
     def fetch_portfolio(self):
@@ -232,7 +254,7 @@ class Database:
             self.connection.rollback()
             raise    
     
-    def fetch_portfolio_performance(self):
+    def fetch_portfolio_performance(self, where_condition=None):
         try:
             query = """
                     SELECT
@@ -250,6 +272,24 @@ class Database:
                 ORDER BY
                     dt, total) AS t;
             """
+            if (where_condition):
+                query = f"""
+                        SELECT
+                    coalesce(JSON_AGG(t), NULL)
+                FROM (
+                    SELECT
+                        asset_class,
+                        dt,
+                        SUM(market_value_sek) AS total
+                    FROM
+                        portfolio
+                    WHERE {where_condition}
+                    GROUP BY
+                        asset_class,
+                        dt
+                    ORDER BY
+                        dt, total) AS t;
+                """
             self.cursor.execute(query)
             self.commit()
             result = self.cursor.fetchall()

@@ -58,12 +58,13 @@ async def getStocks(request: Request, response_class=HTMLResponse):
     if (res.status_code) == 200:
         content = res.json()
         stock_data = content.get("data")
+        stock_performance = content.get("performance") 
         print(json.dumps(stock_data, indent=2))
         if (len(stock_data) != 0): 
             stock_headers = list(stock_data[0].keys())
         else:
             stock_headers = []
-        return templates.TemplateResponse("/stock_page/stocks.html", {"request": request, "stock_data": stock_data, "stock_headers": stock_headers})
+        return templates.TemplateResponse("/stock_page/stocks.html", {"request": request, "stock_data": stock_data, "stock_headers": stock_headers, "stock_performance": stock_performance})
     else:
         raise(HTTPException(status_code=res.status_code, detail="Error"))
 class Stock(BaseModel):
@@ -111,9 +112,13 @@ async def getFunds(request: Request, response_class=HTMLResponse):
     if (res.status_code) == 200:
         content = res.json()
         fund_data = content.get("data")
+        fund_performance = content.get("performance")
         print(json.dumps(fund_data, indent=2))
-        fund_columns = content.get("columns")
-        return templates.TemplateResponse("/funds_page/funds.html", {"request": request, "fund_data": fund_data, "fund_columns": fund_columns})
+        if (len(fund_data) != 0): 
+            fund_headers = list(fund_data[0].keys())
+        else:
+            fund_headers = []
+        return templates.TemplateResponse("/funds_page/funds.html", {"request": request, "fund_data": fund_data, "fund_headers": fund_headers, "fund_performance": fund_performance})
     else:
         raise(HTTPException(status_code=res.status_code, detail="Error"))
         
