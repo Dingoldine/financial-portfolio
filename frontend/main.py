@@ -123,17 +123,41 @@ async def getFunds(request: Request, response_class=HTMLResponse):
         raise(HTTPException(status_code=res.status_code, detail="Error"))
         
 @app.get("/portfolio/update")
-async def updatePortfolio():
+def updatePortfolio(request: Request, response_class=HTMLResponse):
     #avanza_scraper.scrape()
     #return {"message": "Update Portfolio"}
     res = requests.get(f'http://{server_host_address}/doRefresh')
     if res.status_code == 200:
         data = res.json()
+        print(data)
+        return templates.TemplateResponse("/update_page/update.html", {"request": request, "id": data})
+    else:
+        raise(HTTPException(status_code=res.status_code, detail="Error"))
+
+
+
+@app.get("/subscribe/qr")
+def subscribeQR():
+    res = requests.get(f'http://{server_host_address}/getQRBinary')
+    if res.status_code == 200:
+        data = res.json()
+        print(data)
         return data
     else:
         raise(HTTPException(status_code=res.status_code, detail="Error"))
 
+@app.get("/subscribe/{job}")
+def subscribe(job):
+    res = requests.get(f'http://{server_host_address}/getStatus/{job}')
+    if res.status_code == 200:
+        data = res.json()
+        print(data)
+        return data
+    else:
+        raise(HTTPException(status_code=res.status_code, detail="Error"))
+
+
 @app.get("/portfolio/download")
-async def downloadPortfolio():
+def downloadPortfolio():
     #return FileResponse(f'{constants.excelSaveLocation}/portfolio.xlsx', media_type='application/octet-stream',filename="portfolio.xlsx")
     return {"message": "Update Portfolio"}

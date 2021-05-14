@@ -6,6 +6,11 @@ from requests.exceptions import HTTPError
 import configparser, os
 import pandas as pd
 from io import StringIO
+import time
+
+# for 2FA later
+#twoFactorEndpoint = "https://trader.degiro.nl/login/secure/login/totp"
+#payload= {"username":"XXXX","password":"XXXX","queryParams":{},"oneTimePassword":"XXXX"}
 
 BASE_URL =  "https://trader.degiro.nl"
 Config = configparser.ConfigParser()
@@ -20,9 +25,9 @@ def parseResponse(res: Response, s: Session):
     print(json.dumps(s.cookies.get_dict(), indent=2))
     print("####### RESPONSE HEADERS #######")
     print(json.dumps(dict(res.headers), indent=2))
-    print("####### RESPONSE CONTENT #######")
     splitContentType = res.headers.get('content-type').split(";")
     if (splitContentType[0] == 'application/json'):
+        print("####### RESPONSE CONTENT #######")
         data = eval(res.text.replace('true', 'True').replace('false', 'False'))
         print(json.dumps(data, indent=2))
         return data
@@ -74,19 +79,32 @@ def clean(d: Dict):
         "closePriceDate"
         ]
    
-    for value in d.values():
+    positionsToDrop = []
+    for key, value in d.items():
+        # remove old positions returned by degiro
+        if (value['size'] == 0.0):
+            positionsToDrop.append(key)
+            continue
         for key in keys_to_be_deleted:
             try:
+                # remove the above specified key/value pairs
                 del value[key]
             except KeyError:
                 continue
+
+    for key in positionsToDrop:
+        del d[key]
+
     return d
-def extractAccountID(res: Response):
-    return '121008181'
+
+# def extractAccountID(res: Response):
+#     print(res.content)
+#     print(res.text.replace())
+#     return '121008181'
 
 def parseHoldings(data: Dict, portfolio: Dict): # res: Response, 
         holdingsDict = data.get("data")
-        return mergeDicts(holdingsDict, portfolio)
+        return clean(mergeDicts(holdingsDict, portfolio))
         
 
 def parsePortfolio(data: Dict):
@@ -106,60 +124,63 @@ def parsePortfolio(data: Dict):
     return list(d.keys()), positionsDict
 
 def scrapeLIVE():
-    with requests.Session() as session:
-        request_headers = {
-            'Host': 'trader.degiro.nl',
-            'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64; rv:78.0) Gecko/20100101 Firefox/78.0',
-            # 'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-            'Accept-Language': 'en-US,en;q=0.5',
-            'Accept-Encoding': 'gzip, deflate, br',
-            # 'Referer': 'https://trader.degiro.nl/login/se',
-            'Upgrade-Insecure-Requests': '1',
-            'Connection': 'keep-alive'
-        }
+    try:
+        with requests.Session() as session:
+            request_headers = {
+                'Host': 'trader.degiro.nl',
+                'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64; rv:78.0) Gecko/20100101 Firefox/78.0',
+                # 'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+                'Accept-Language': 'en-US,en;q=0.5',
+                'Accept-Encoding': 'gzip, deflate',
+                # 'Referer': 'https://trader.degiro.nl/login/se',
+                'Upgrade-Insecure-Requests': '1',
+                'Connection': 'keep-alive'
+            }
 
-        session.headers.update(request_headers)
+            session.headers.update(request_headers)
 
-        print(json.dumps(session.cookies.get_dict(), indent=2))
-        
-        res = session.get(f'{BASE_URL}/login/se' , headers=request_headers)
-        checkError(res)
-        _ = parseResponse(res, session)
+            print(json.dumps(session.cookies.get_dict(), indent=2))
+            
+            res = session.get(f'{BASE_URL}/login/se' , headers=request_headers)
+            checkError(res)
+            _ = parseResponse(res, session)
 
-        session.headers.update({'Origin': 'https://trader.degiro.nl'})
-        
-        res = session.post(BASE_URL + "/login/secure/login", json={"username": USERNAME,"password": PASSWORD,"queryParams":{}})
-        checkError(res)
-        _ = parseResponse(res, session)
+            session.headers.update({'Origin': 'https://trader.degiro.nl'})
+            
+            res = session.post(BASE_URL + "/login/secure/login", json={"username": USERNAME,"password": PASSWORD,"queryParams":{}})
+            checkError(res)
+            _ = parseResponse(res, session)
 
-        sessionID = extractSessionID(session)
+            sessionID = extractSessionID(session)
 
-        res = session.get(f'{BASE_URL}/pa/secure/client?sessionId={sessionID}')
-        checkError(res)
-        parseResponse(res, session)
+            res = session.get(f'{BASE_URL}/pa/secure/client?sessionId={sessionID}')
+            checkError(res)
+            _ = parseResponse(res, session)
 
-        res = session.get(f'{BASE_URL}/pa/secure/client?sessionId={sessionID}')
-        checkError(res)
-        _ = parseResponse(res, session)
-        intAccount = extractAccountID(res)
-        params = '&portfolio=0'
-        
-        res = session.get(f'{BASE_URL}/trading/secure/v5/update/{intAccount};jsessionid={sessionID}?{params}')
-        checkError(res)
-        response_data = parseResponse(res, session)
-        productIDs, portfolio_dict = parsePortfolio(response_data)
+            res = session.get(f'{BASE_URL}/pa/secure/client?sessionId={sessionID}')
+            checkError(res)
+            account_data = parseResponse(res, session)
+            intAccount = account_data.get("data").get('intAccount')
 
-        session.headers.update({'referer': 'https://trader.degiro.nl/trader/'})
-           
-        #session.post(f'{BASE_URL}/v5/products/info?intAccount={intAccount}&sessionId={sessionID}')
-        #print(brotli.decompress(res.content))
+            params = '&portfolio=0'
+            res = session.get(f'{BASE_URL}/trading/secure/v5/update/{intAccount};jsessionid={sessionID}?{params}')
+            checkError(res)
+            response_data = parseResponse(res, session)
+            productIDs, portfolio_dict = parsePortfolio(response_data)
 
-        res = session.post(f'{BASE_URL}/product_search/secure/v5/products/info?intAccount={intAccount}&sessionId={sessionID}', json=productIDs)
-        checkError(res)
-        response_data = parseResponse(res, session)
-        holdings = parseHoldings(response_data, portfolio_dict)
-        print(json.dumps(holdings, indent=2))
+            session.headers.update({'referer': 'https://trader.degiro.nl/trader/'})
+            
+            #session.post(f'{BASE_URL}/v5/products/info?intAccount={intAccount}&sessionId={sessionID}')
+            #print(brotli.decompress(res.content))
 
+            res = session.post(f'{BASE_URL}/product_search/secure/v5/products/info?intAccount={intAccount}&sessionId={sessionID}', json=productIDs)
+            checkError(res)
+            response_data = parseResponse(res, session)
+            holdings = parseHoldings(response_data, portfolio_dict)
+            print(json.dumps(holdings, indent=2))
+            return holdings
+    except Exception:
+        raise
 
 def mergeDicts(d1: Dict, d2: Dict):
     d3 = {}
@@ -191,7 +212,7 @@ def scrapeTEST():
             positionsDict.update({position.get("id"): fieldDict})
 
 
-
+        time.sleep(20)
         with open(os.path.join(os.getcwd(), 'requestResponse.txt'), 'r') as secondFile:
             stockHoldings = eval(secondFile.read().replace('true', 'True').replace('false', 'False')).get('data')
             mergedDict = mergeDicts(stockHoldings, positionsDict)

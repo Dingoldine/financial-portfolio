@@ -7,21 +7,23 @@ from database import Database
 import celeryconfig
 from celery.signals import worker_process_init, worker_process_shutdown
 import configparser
-import time, sys
+import time, sys 
 Config = configparser.ConfigParser()
 Config.read('./config.ini')
 
-if (Config["NETWORK-MODE"]["localhost"] == True):
-    broker = f'pyamqp://{Config["CELERY"]["RABBITMQ_DEFAULT_USER"]}:{Config["CELERY"]["RABBITMQ_DEFAULT_PASS"]}@localhost'
-else:
-    broker = f'pyamqp://{Config["CELERY"]["RABBITMQ_DEFAULT_USER"]}:{Config["CELERY"]["RABBITMQ_DEFAULT_PASS"]}@rabbit'
 
+if (Config["NETWORK-MODE"]["localhost"] == True):
+    celery_broker = f'pyamqp://{Config["CELERY"]["RABBITMQ_DEFAULT_USER"]}:{Config["CELERY"]["RABBITMQ_DEFAULT_PASS"]}@localhost'
+    celery_backend = 'redis://localhost:6379/0' 
+else:
+    celery_broker = f'pyamqp://{Config["CELERY"]["RABBITMQ_DEFAULT_USER"]}:{Config["CELERY"]["RABBITMQ_DEFAULT_PASS"]}@{Config["CELERY"]["RABBITMQ_HOSTNAME"]}'
+    celery_backend = f'redis://{Config["REDIS"]["REDIS_HOSTNAME"]}:6379/0'
 # Create the celery app and get the logger
 try:
-    celery_app = Celery('portfolio_worker', broker=broker)
+    celery_app = Celery('portfolio_worker', broker=celery_broker, backend=celery_backend)
     celery_app.config_from_object(celeryconfig)
 except:
-    print("Could not connect to broker")
+    print("Could not configure celery")
     sys.exit(-1)
 
 
@@ -62,23 +64,36 @@ def add(x, y):
     logger.info("Adding %s + %s, res: %s" % (x, y, res))
     return res
 
+
+@celery_app.task(bind=True, serializer='json')
+
+def updateDBTEST(self, portfolio):
+    logger.info("----Updating db----")
+    #logger.info(portfolio)
+    try:
+        time.sleep(5)
+        return {'message': 'job completed successfully'} 
+    except Exception:
+        raise
+
 @celery_app.task(bind=True, serializer='json')
 def updateDB(self, portfolio):
     logger.info("----Updating db----")
-    logger.info(portfolio)
+    #logger.info(portfolio)
     try:
         #db.createTableFromDF(portfolio.get('stocks'), "stocks")
         #db.createTableFromDF(portfolio.get('funds'), "funds")
         db.createTableFromDF(portfolio.get('portfolio'), "portfolio")
         logger.info("----Updating db completed successfully----")
-        return {}
-    except Exception:
+        return {'message': 'job completed successfully'} 
+    except Exception as e:
+        logger.exception("Error", exc_info=e)
         raise
 
 @celery_app.task(bind=True, serializer='json')
 def scrapeAvanza(self):
     logger.info("LOGGING TASK SCRAPING AVANZA: %s", )
-    return avanza_scraper.scrapeTEST()
+    return avanza_scraper.scrape(db)
 
 @celery_app.task(bind=True, serializer='json')
 def scrapeDegiro(self, something=""):
@@ -108,18 +123,10 @@ def updatePortfolio(self):
             updateDB.s()
         ])
 
-        res = workflow.apply_async()
-        #workflow = chain(group([scrapeAvanza.s(),scrapeDegiro.s()]), constructPortfolio.s(), updateDB().s)
-        ##res = chord(header)(updateDB.s())
-        #res = chain(scrapeAvanza.s(),scrapeDegiro.s(), constructPortfolio.s(), updateDB.s())()
-        
+        res = workflow()
+  
         return res
-        # logger.info("Scraping complete:, response: %s" % (res))
-        # time.sleep(1)
-        # self.update_state(state="PROGRESS", meta={'progress': 50})
-        # time.sleep(1)
-        # self.update_state(state="PROGRESS", meta={'progress': 90})
-        # time.sleep(1)
-    # Avanza.FailWhaleError, Avanza.LoginError
+
     except (Exception) as exc:
-         raise self.retry(exc=exc, countdown=5, max_retries=2) #retry in 5 seconds
+        logger.exception("Error", exc_info=exc)
+        raise self.retry(exc=exc, countdown=5, max_retries=1) #retry in 5 seconds

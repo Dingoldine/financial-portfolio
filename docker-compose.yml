@@ -47,15 +47,21 @@ services:
     entrypoint: celery -A portfolio_worker worker -c 2 --loglevel=info -Q default,celery
     depends_on:
       - rabbit
-      - redis
+      - redisdb
+      - timescaledb
   rabbit:
     image: rabbitmq:3.8.9
     hostname: "rabbit"
     env_file: ./env/rabbit.env
     expose:
       - 5672
-  redis:
+  redisdb:
     image: redis:6.2.1
-    hostname: redis
+    hostname: redisdb
+    volumes:
+        - /Users/philiprumman/Projects/financial-portfolio/worker/redis.conf:/redis.conf
+    command: [ "redis-server", "/redis.conf" ]
+    ports: 
+      - 6379:6379
     expose:
       - 6379

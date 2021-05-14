@@ -25,7 +25,11 @@ def clickElement(browser, XPATH, maxWaitTime, extraWaitTime = 0):
             button.click()
             waitforload(browser, maxWaitTime)
             return
-        except (TimeoutException, NoSuchElementException, ElementClickInterceptedException, \
+        except ElementClickInterceptedException:
+            browser.execute_script("arguments[0].click();", button)
+            waitforload(browser, maxWaitTime)
+            return
+        except (TimeoutException, NoSuchElementException, \
             UnexpectedAlertPresentException, MoveTargetOutOfBoundsException) as e:
             if (isinstance(e, MoveTargetOutOfBoundsException)):
                 moveToTarget = False
@@ -35,7 +39,8 @@ def clickElement(browser, XPATH, maxWaitTime, extraWaitTime = 0):
             extraWaitTime += 1
             retries += 1
             error = e
-    
+
+
     raise(error)
     
 
