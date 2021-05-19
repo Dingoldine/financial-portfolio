@@ -1,43 +1,47 @@
-import configparser, psycopg2, sys, time
-
-from sqlalchemy.sql.expression import null
-import os
-import pandas as pd
+import configparser
+import time
 from io import StringIO
+import psycopg2
+import pandas as pd
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy import pool, create_engine, Integer, String, Numeric, Float, Boolean, DateTime, BigInteger, text
 #import numpy as np
+
+
 class Database:
 
     def __init__(self):
         Config = configparser.ConfigParser()
         Config.read('./config.ini')
-        
-        if (Config["NETWORK-MODE"]["localhost"] == True):
-            Config["DATABASE"]["host"] = "localhost"
 
-        self.dbConfig = dict(Config.items("DATABASE"))
+        if Config['NETWORK-MODE']['localhost'] == True:
+            Config['DATABASE']['host'] = 'localhost'
 
+        self.db_config = dict(Config.items('DATABASE'))
+
+        self.cursor = None
+        self.connection = None
+        self.engine = None
 
     def connect(self):
         for attempt in range(10):
             try:
-                connection = psycopg2.connect(**self.dbConfig)
+                connection = psycopg2.connect(**self.db_config)
 
                 cursor = connection.cursor()
                 # Print TimescaleDB Connection properties
-                print ( connection.get_dsn_parameters(),"\n")
+                print(connection.get_dsn_parameters(), "\n")
 
                 # Print TimescaleDB version
                 cursor.execute("SELECT version();")
                 record = cursor.fetchone()
-                print("You are connected to - ", record,"\n")
+                print("You are connected to - ", record, "\n")
 
                 self.connection = connection
                 self.cursor = cursor
-                
-                ## SQLALCHEMY ENGINE-
-                self.engine = create_engine('postgresql+psycopg2://{}:{}@{}/{}'.format(self.dbConfig["user"], self.dbConfig["password"],self.dbConfig["host"], self.dbConfig["database"]), echo=True, pool_pre_ping=True)
+                # SQLALCHEMY ENGINE
+                self.engine = create_engine('postgresql+psycopg2://{}:{}@{}/{}'.format(
+                    self.db_config["user"], self.db_config["password"], self.db_config["host"], self.db_config["database"]), echo=True, pool_pre_ping=True)
             except (Exception, psycopg2.Error) as error:
                 print("Error while connecting to TimescaleDB", error)
                 print(f"Retrying in {1 + attempt * attempt}")
@@ -49,9 +53,8 @@ class Database:
             print("Error while connecting to TimescaleDB, aborting...")
             raise ConnectionError
 
-    def getLocalSession(self):
-        SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=self.engine)
-        return SessionLocal()
+    def get_local_session(self):
+        return sessionmaker(autocommit=False, autoflush=False, bind=self.engine)()
 
     def create(self):
 
@@ -96,17 +99,16 @@ class Database:
             """
             SELECT create_hypertable('portfolio', 'dt', if_not_exists => TRUE, migrate_data => TRUE);
             """,
-            """         
+            """ 
             CREATE TABLE IF NOT EXISTS qr_table (
-                qr_code TEXT,
-                ts TIMESTAMP WITHOUT TIME ZONE,
-                PRIMARY KEY (qr_code, ts)
+                qr_code TEXT NOT NULL,
+                ts TIMESTAMP WITHOUT TIME ZONE NOT NULL
             );
             """
         )
-        for q in sql_commands:
-            self.query(q)
-            
+        for query in sql_commands:
+            self.query(query)
+
         self.commit()
 
     def reset(self):
@@ -114,17 +116,16 @@ class Database:
         self.query(query)
         self.create()
 
- 
     def store_qr_code(self, binary):
         query = f"""
-            INSERT INTO qr_table VALUES ({str(binary), pd.datetime.now().timestamp()});
+            INSERT INTO qr_table VALUES ('{str(binary)}', '{pd.Timestamp.now()}');
         """
         self.query(query)
         self.commit()
 
-    def createTableFromDF(self, json, tableName):
+    def create_table_from_df(self, json, table_name):
 
-        # # drop manually because of bug 
+        # # drop manually because of bug
         # # see locks query
         # self.query('select pid, usename, pg_blocking_pids(pid) as blocked_by, query as blocked_query from pg_stat_activity where cardinality(pg_blocking_pids(pid)) > 0;')
         # # clear locks query
@@ -132,16 +133,16 @@ class Database:
         # self.query(f'DROP TABLE IF EXISTS {tableName} CASCADE;')
         # self.commit()
 
-
-        df=pd.read_json(StringIO(json), orient='index')
+        df = pd.read_json(StringIO(json), orient='index')
         df['dt'] = pd.datetime.now().date()
         df['asset_class'] = 'undefined'
-        df.columns = df.columns.str.replace(' ', '_').str.lower().str.replace('(', '').str.replace(')', '')
-        #df.reset_index(inplace=True)
-        
+        df.columns = df.columns.str.replace(
+            ' ', '_').str.lower().str.replace('(', '').str.replace(')', '')
+        # df.reset_index(inplace=True)
+
         #df.rename(columns={ df.columns[0]: 'asset' }, inplace=True)
 
-        def changeType(x):
+        def change_type(x):
             switcher = {
                 'i': BigInteger(),
                 'f': Float(),
@@ -150,8 +151,8 @@ class Database:
                 'M': DateTime()
             }
             return switcher.get(x.kind)
-        
-        dTypeDict = dict(df.dtypes.apply(changeType))
+
+        data_type_dict = dict(df.dtypes.apply(change_type))
 
         try:
             with self.engine.connect() as connection:
@@ -159,38 +160,40 @@ class Database:
                 query = "SELECT DISTINCT ON (asset) asset, dt, asset_class FROM portfolio WHERE asset_class != 'undefined' ORDER BY asset, dt DESC;"
                 result = connection.execute(query)
                 for row in result:
-                    df.loc[df['asset'] == row['asset'], 'asset_class'] = row['asset_class']
+                    df.loc[df['asset'] == row['asset'],
+                           'asset_class'] = row['asset_class']
 
-                df.to_sql(tableName, con=connection, index=False, dtype=dTypeDict, if_exists='append')
-        
-        except Exception as e:
-            raise(e)
+                df.to_sql(table_name, con=connection, index=False,
+                          dtype=data_type_dict, if_exists='append')
+
+        except Exception:
+            raise
 
     def disconnect(self):
-        try: 
+        try:
             self.cursor.close()
             self.connection.close()
             print("TimescaleDB connection is closed")
-        except (Exception, psycopg2.Error) as error :
-            print ("Error while disconnecting from TimescaleDB", error)
+        except (Exception, psycopg2.Error) as error:
+            print("Error while disconnecting from TimescaleDB", error)
 
     def query(self, query):
-        try:  
+        try:
             print("executing: ", query)
             self.cursor.execute(query)
         except:
             self.connection.rollback()
             raise
 
-
-    def getColumnNames(self, tableName):
+    def get_column_names(self, table_name):
         result = []
-        self.query("SELECT column_name FROM information_schema.columns WHERE table_schema = 'public' AND table_name = '{}';".format(tableName))
+        self.query(
+            "SELECT column_name FROM information_schema.columns WHERE table_schema = 'public' AND table_name = '{}';".format(table_name))
         for col in self.cursor.fetchall():
             result.append(col[0].upper())
         return result
 
-    def updatePortfolioTable(self, item, session):
+    def update_portfolio_table(self, item, session):
         try:
             command = f"UPDATE portfolio SET asset_class='{item.asset_class}' WHERE asset='{item.asset}';"
             session.execute(text(command))
@@ -198,9 +201,9 @@ class Database:
         except:
             session.rollback()
             raise
-    
+
     def fetch_qr_code(self):
-        query = f"""
+        query = """
             SELECT DISTINCT ON (qr_code)
                 *
             FROM
@@ -214,14 +217,13 @@ class Database:
         result = self.cursor.fetchall()
         return result
 
-            
     def fetch_stocks(self):
-        selectList = "*"
+        select_list = "*"
         query = f"""
         SELECT
             coalesce(JSON_AGG(t), NULL)
         FROM ( SELECT DISTINCT ON (asset)
-                {selectList}
+                {select_list}
             FROM
                 portfolio
             WHERE is_fund=FALSE
@@ -231,16 +233,18 @@ class Database:
         self.query(query)
         self.commit()
         result = self.cursor.fetchall()
-        if (result[0][0]): return result
-        else: return [[[]]]
+        if result[0][0]:
+            return result
+        else:
+            return [[[]]]
 
     def fetch_funds(self):
-        selectList = "*"
+        select_list = "*"
         query = f"""
         SELECT
             coalesce(JSON_AGG(t), NULL)
         FROM ( SELECT DISTINCT ON (asset)
-                {selectList}
+                {select_list}
             FROM
                 portfolio
             WHERE is_fund=TRUE
@@ -250,18 +254,18 @@ class Database:
         self.query(query)
         self.commit()
         result = self.cursor.fetchall()
-        if (result[0][0]): return result
-        else: return [[[]]]
-
-
+        if result[0][0]:
+            return result
+        else:
+            return [[[]]]
 
     def fetch_portfolio(self):
-        selectList = "asset, shares, ROUND(cast(purchase_price as numeric),2) AS purchase_price, ROUND(cast(latest_price as numeric),2) AS latest_price, ROUND(cast(market_value_sek as numeric),2) AS market_value_sek, ROUND(cast(change as numeric),4) AS change, currency, isin, symbol, ROUND(cast(weight_portfolio as numeric),4) AS weight, asset_class"
+        select_list = "asset, shares, ROUND(cast(purchase_price as numeric),2) AS purchase_price, ROUND(cast(latest_price as numeric),2) AS latest_price, ROUND(cast(market_value_sek as numeric),2) AS market_value_sek, ROUND(cast(change as numeric),4) AS change, currency, isin, symbol, ROUND(cast(weight_portfolio as numeric),4) AS weight, asset_class"
         query = f"""
         SELECT
             coalesce(JSON_AGG(t), NULL)
         FROM ( SELECT DISTINCT ON (asset)
-                {selectList}
+                {select_list}
             FROM
                 portfolio
             ORDER BY
@@ -270,10 +274,11 @@ class Database:
         self.query(query)
         self.commit()
         result = self.cursor.fetchall()
-        if (result[0][0]): return result
-        else: return [[[]]]
+        if result[0][0]:
+            return result
+        else:
+            return [[[]]]
 
-    
     def fetch_portfolio_performance(self, where_condition=None):
         query = """
                 SELECT
@@ -291,7 +296,7 @@ class Database:
             ORDER BY
                 dt, total) AS t;
         """
-        if (where_condition):
+        if where_condition:
             query = f"""
                     SELECT
                 coalesce(JSON_AGG(t), NULL)
@@ -312,10 +317,11 @@ class Database:
         self.query(query)
         self.commit()
         result = self.cursor.fetchall()
-        if (result[0][0]): return result
-        else: return [[[]]]
+        if result[0][0]:
+            return result
+        else:
+            return [[[]]]
 
-    
     def commit(self):
         print("COMMITING: ")
         self.connection.commit()

@@ -2,22 +2,34 @@
 {% block title %}Update{% endblock %}
 {% set active_page = 'Update' %}
 {% block content %}
+<link rel="stylesheet" href="../static/update_page/update.css" type="text/css" />
 <section class="container-fluid">
     <div id="loading-wrapper" style="height: 100vh;">
-        <div id="loading">loading...</div>
+        <div class="spinner-container text-center">
+            <div class="spinner-border" role="status">
+              <span class="sr-only">Loading...</span>
+            </div>
+          </div>
     </div>
     <section class="row justify-content-center">
         <div id="qr-code-wrapper">
             <img width="200px" height="200px" id="qr-code" src="" alt=""></img>
+            <aside id="qr-code-dt"></aside>
+            <h4 id="open-bank-id-prompt">Open Bank-ID App</h4>
+            <p id="loading-dots"></p>
         </div>
     </section>
 </section>
 <script>
     const id = {{ id|tojson|safe }}
-
+    let loadingDiv = document.getElementById('loading-wrapper')
+    let qrWrapperElement = document.getElementById('qr-code-wrapper') 
+    let qrElement = document.getElementById('qr-code')
+    let qrCodeRecieved = false;
+    // Call to fetch binary
     async function subscribeQR() {
         let response = await fetch(`/subscribe/qr`); 
-
+        
         if (response.status == 502) {
             // Status 502 is a connection timeout error,
             // may happen when the connection was pending for too long,
@@ -36,16 +48,11 @@
             // Get and show the message
             let res = await response.json();
    
-            if (res.data.length != 0) {
-                return res.data
-            }
-
-            return new PromiseRejectionEvent()
-
+            return res.data
+           
         }
     }
 
-    let qrCodeRecieved = false;
     async function subscribe(job_id) {
         let response = await fetch(`/subscribe/${job_id}`);
         if (response.status == 502) {
@@ -53,13 +60,13 @@
             // may happen when the connection was pending for too long,
             // and the remote server or a proxy closed it
             // let's reconnect
-            await new Promise(resolve => setTimeout(resolve, 2000));
+            await new Promise(resolve => setTimeout(resolve, 4000));
             await subscribe(job_id);
         } else if (response.status != 200) {
             // An error - let's show it
             console.log(response.statusText);
             // Reconnect in one second
-            await new Promise(resolve => setTimeout(resolve, 2000));
+            await new Promise(resolve => setTimeout(resolve, 4000));
             await subscribe(job_id);
         } else {
             // Get and show the message
@@ -67,20 +74,24 @@
             console.log(message); 
 
             if ((message == 'STARTED' |  message == "PENDING") && !qrCodeRecieved) {
-                // Call to fetch binary
-                qrElement = document.getElementById('qr-code')
+
                 await subscribeQR()
-                .then(data => { qrElement.src = data; qrCodeRecieved=true;})
+                .then(data => { 
+                    if (data.length > 0 ) {
+                        loadingDiv.style.display = 'none';
+                        qrElement.src = data[0][0]; 
+                        qrCodeRecieved=true;
+                    }
+                })
                 .catch(err => {console.log(err)})
                 
             }
 
             if (message == "SUCCESS" | message == "FAILURE") {
-                document.getElementById('loading-wrapper').style.visibility = 'hidden';
                 return
             }
             // Call subscribe() again in one second to get the next message
-            await new Promise(resolve => setTimeout(resolve, 2000));
+            await new Promise(resolve => setTimeout(resolve, 4000));
             await subscribe(job_id)
         }
     }

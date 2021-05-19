@@ -1,16 +1,19 @@
 from bs4 import BeautifulSoup
 from selenium import webdriver
+#from selenium.webdriver import Firefox
+#from selenium.webdriver.firefox.options import Options
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from helpermodules import Utils
-from scrapers._scraping_functions import clickElement, waitforload
+from scrapers._scraping_functions import clickElement
 import constants
+import time
 import pandas as pd
 import re
 
-
 def _parseTable(table):
+
     n_rows = 0
     column_names = []
     rows = []
@@ -76,7 +79,7 @@ def _parseHTML(data):
                 # print(table.prettify())
                 headers, rows = _parseTable(table)
                 df, err = _buildDataframe(headers, rows, caption)
-                # Utils.printDf(df)
+                # Utils.printDf(df)f
                 if(err):
                     continue
                 dataframes.update({df.name: df.to_json(orient='index')})
@@ -84,6 +87,7 @@ def _parseHTML(data):
         return dataframes
 
     except Exception as e:
+
         Utils.log_error(e)
 
 
@@ -127,7 +131,7 @@ def _buildDataframe(headers, rows, caption):
         df["Currency"] = "SEK"
         df.drop(unnecessary_columns, axis=1, inplace=True)
         df.columns = new_column_names
-        # leftMostCol = df.columns.values[0]
+        #l eftMostCol = df.columns.values[0]
         # df.set_index(leftMostCol, inplace=True) # Turn this column to index
         return(df)
 
@@ -140,6 +144,7 @@ def _buildDataframe(headers, rows, caption):
         for row in rows:
             # del row[0]  #remove buy
             del row[0]  # rm sell
+            pass
 
         df = pd.DataFrame.from_records(rows, columns=headers)
         df["Currency"] = "SEK"
@@ -148,7 +153,7 @@ def _buildDataframe(headers, rows, caption):
         df.columns = new_column_names
         # leftMostCol = df.columns.values[0]
         # df.set_index(leftMostCol, inplace=True) # Turn this column to index
-        return df
+        return df 
 
     def cert(headers, rows):
         # cleanup headers
@@ -164,7 +169,7 @@ def _buildDataframe(headers, rows, caption):
         df.name = "Certificates"
         df.drop(unnecessary_columns, axis=1, inplace=True)
         df.columns = new_column_names
-        #leftMostCol = df.columns.values[0]
+        # leftMostCol = df.columns.values[0]
         # df.set_index(leftMostCol, inplace=True) # Turn this column to index
         return(df)
 
@@ -201,63 +206,58 @@ def _buildDataframe(headers, rows, caption):
     return df, None
 
 
-def _get_fund_details(browser):
-    # wait for table to load
-    fundTableXPATH = "//table[contains(@class, 'groupInstTypeTable')][2]"
-    _ = WebDriverWait(browser, 10).until(
-        EC.presence_of_element_located((By.XPATH, fundTableXPATH))
-    )
-
-    # find all fund links
-    allLinksXPATH = "//table[contains(@class, 'groupInstTypeTable')][2]// \
-        *[contains(@class, 'instrumentName')]//*[contains(@class, 'ellipsis')]/a"
-    instrumentlinks = browser.find_elements(By.XPATH, allLinksXPATH)
-    fundDictionary = {}
-    for link in instrumentlinks:
-        fundDictionary[link.text.strip()] = link.get_attribute('href')
-
-    # navigate to each fund and get fund info
-    for instrument, href in fundDictionary.items():
-        print(instrument)
-        browser.get(href)
-
-        fundDetailsButtonXPATH = '/html/body/aza-app/div/main/div/aza-fund-guide/aza-subpage/div/div/ \
-            div/div[2]/div[1]/aza-card[2]/div/div[1]/aza-toggle-switch/aza-toggle-option[3]/button'
-
-        clickElement(browser, fundDetailsButtonXPATH, 5, extraWaitTime=3)
-
-        # wait for fund details to load
-        fundDetailsBoxXPATH = '/html/body/aza-app/div/main/div/aza-fund-guide/ \
-            aza-subpage/div/div/div/div[2]/div[1]/aza-card[2]/div/div[2]/div'
-        _ = WebDriverWait(browser, 60).until(
-            EC.visibility_of_element_located(
-                (By.XPATH, fundDetailsBoxXPATH))
-        )
-
-        html = BeautifulSoup(browser.page_source, 'lxml')
-        # store page content
-        fundDictionary.update({instrument: str(html)})
-
-        #Utils.saveTxtFile(str(html.prettify()), instrument)
-
-    # go back
-    browser.execute_script(f'window.history.go(-{len(fundDictionary)})')
-
-    return fundDictionary
-
-
 def _get_portfolio(browser):
     """Saves a txt file of all fund detail pages and returns portfolio view html """
 
     try:
-        browser.get(
-            "https://www.avanza.se/min-ekonomi/innehav/innehav-old.html")
+        browser.get("https://www.avanza.se/min-ekonomi/innehav/innehav-old.html")
+
+        # wait for table to load
+        fundTableXPATH = "//table[contains(@class, 'groupInstTypeTable')][2]"
+        _ = WebDriverWait(browser, 10).until(
+            EC.presence_of_element_located((By.XPATH, fundTableXPATH))
+        )
+
+        # find all fund links
+        allLinksXPATH = "//table[contains(@class, 'groupInstTypeTable')][2]// \
+        *[contains(@class, 'instrumentName')]//*[contains(@class, 'ellipsis')]/a"
+        instrumentlinks = browser.find_elements(By.XPATH, allLinksXPATH)
+        fundDictionary = {}
+        for link in instrumentlinks:
+            fundDictionary[link.text.strip()] = link.get_attribute('href')
+
+        # navigate to each fund and get fund info
+        for instrument, href in fundDictionary.items():
+            print(instrument)
+            browser.get(href)
+
+            fundDetailsButtonXPATH = '/html/body/aza-app/div/main/div/aza-fund-guide/aza-subpage/div/div/ \
+            div/div[2]/div[1]/aza-card[2]/div/div[1]/aza-toggle-switch/aza-toggle-option[3]/button'
+
+            clickElement(browser, fundDetailsButtonXPATH, 5, extraWaitTime=3)
+
+            # wait for fund details to load
+            fundDetailsBoxXPATH = '/html/body/aza-app/div/main/div/aza-fund-guide/ \
+            aza-subpage/div/div/div/div[2]/div[1]/aza-card[2]/div/div[2]/div'
+            _ = WebDriverWait(browser, 60).until(
+                EC.visibility_of_element_located(
+                    (By.XPATH, fundDetailsBoxXPATH))
+            )
+
+            html = BeautifulSoup(browser.page_source, 'lxml')
+            # store page content
+            fundDictionary.update({instrument: str(html)})
+
+            Utils.saveTxtFile(str(html.prettify()), instrument)
+
+        # go back
+        browser.execute_script(f'window.history.go(-{len(fundDictionary)})')
 
         # wait for javascript to load then scrape--
-        waitforload(browser, 20)
+        time.sleep(5)
         soup = BeautifulSoup(browser.page_source, 'lxml')
 
-        return str(soup.prettify())
+        return str(soup.prettify()), fundDictionary
 
     except Exception as e:
         Utils.log_error(e)
@@ -267,17 +267,17 @@ def _get_portfolio(browser):
         browser.quit()
 
 
-def _loginToAvanza(url, dbModel):
+def _loginToAvanza(url, ):
     """Function that log in to Avanza, returns selenium driver object"""
     try:
         opt = webdriver.FirefoxOptions()
         fp = webdriver.FirefoxProfile()
 
-        opt.add_argument('-headless')
+        #opt.add_argument()
         opt.profile = fp
 
         browser = webdriver.Firefox(
-            options=opt, service_log_path=constants.GECKO_LOG_PATH, executable_path=constants.GECKO_EXECUTABLE_PATH)
+            options=opt)
         # poll for elements for --  seconds max, before shutdown
         browser.implicitly_wait(0)
         wait = WebDriverWait(browser, 60)
@@ -299,15 +299,13 @@ def _loginToAvanza(url, dbModel):
         qrCodeElement = WebDriverWait(browser, 5).until(
             EC.presence_of_element_located((By.XPATH, qrCodeElementXpath))
         )
-
+        
         # get the canvas as a PNG base64 string
         canvasDataURL = browser.execute_script(
             "return arguments[0].toDataURL('image/png');", qrCodeElement)
-        dbModel.store_qr_code(canvasDataURL)
 
-        # wait until logged in view found
-        sideMenuXPATH = "/html/body/aza-app/div/aza-personal-menu/div/nav"
-        wait.until(EC.presence_of_element_located((By.XPATH, sideMenuXPATH)))
+
+        wait.until(EC.presence_of_element_located((By.XPATH, "/html/body/aza-app/div/aza-personal-menu/div/nav")))
 
         return browser
     except Exception as e:
@@ -316,27 +314,30 @@ def _loginToAvanza(url, dbModel):
         raise
 
 
-# def scrapeTEST(dbModel):
-#     # time.sleep(10)
-#     html = Utils.readTxtFile('htmlAvanza')
-#     time.sleep(5)
-#     dataframes = _parseHTML(html)
-#     print(dataframes)
-#     return dataframes
+def scrapeTEST():
+    # time.sleep(10)
+    html = Utils.readTxtFile('htmlAvanza')
+    time.sleep(5)
+    dataframes = _parseHTML(html)
+    print(dataframes)
+    return dataframes
 
 
-def scrape(dbModel):
+def scrape():
 
     login_url = 'https://www.avanza.se/start(right-overlay:login/login-overlay)'
 
     # login and get new data
-    browser = _loginToAvanza(login_url, dbModel)
+    browser = _loginToAvanza(login_url)
 
-    html = _get_portfolio(browser)
+    html, fund_details_dict = _get_portfolio(browser)
 
     # for reuse
-    #Utils.saveTxtFile(html, 'htmlAvanza')
+    Utils.saveTxtFile(html, 'htmlAvanza')
 
     dataframes = _parseHTML(html)
 
+    # Perhaps send to Cloud object storage
+    #Excel.create(dataframes, 'portfolio', 1)
     return dataframes
+scrape()

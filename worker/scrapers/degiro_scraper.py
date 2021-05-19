@@ -123,7 +123,7 @@ def parsePortfolio(data: Dict):
 
     return list(d.keys()), positionsDict
 
-def scrapeLIVE():
+def scrape():
     try:
         with requests.Session() as session:
             request_headers = {
@@ -197,23 +197,23 @@ def mergeDicts(d1: Dict, d2: Dict):
 
 
 
-def scrapeTEST():
-    with open(os.path.join(os.getcwd(), 'portfolioResponse.json'), "r") as file:
-        portfolioList = eval(file.read().replace('true', 'True').replace('false', 'False')).get("portfolio").get("value")
-        positionsDict = {}
-        interestingFields = ["id","value", "size", "price", "breakEvenPrice"]
-        for position in portfolioList:
-            fieldDict = {}
-            for field in position.get("value"):
-                fieldKey = field.get("name") 
-                if fieldKey in interestingFields:
-                    val = field.get("value")
-                    fieldDict.update({fieldKey: val})
-            positionsDict.update({position.get("id"): fieldDict})
+# def scrapeTEST():
+#     with open(os.path.join(os.getcwd(), 'portfolioResponse.json'), "r") as file:
+#         portfolioList = eval(file.read().replace('true', 'True').replace('false', 'False')).get("portfolio").get("value")
+#         positionsDict = {}
+#         interestingFields = ["id","value", "size", "price", "breakEvenPrice"]
+#         for position in portfolioList:
+#             fieldDict = {}
+#             for field in position.get("value"):
+#                 fieldKey = field.get("name") 
+#                 if fieldKey in interestingFields:
+#                     val = field.get("value")
+#                     fieldDict.update({fieldKey: val})
+#             positionsDict.update({position.get("id"): fieldDict})
 
 
-        time.sleep(20)
-        with open(os.path.join(os.getcwd(), 'requestResponse.txt'), 'r') as secondFile:
-            stockHoldings = eval(secondFile.read().replace('true', 'True').replace('false', 'False')).get('data')
-            mergedDict = mergeDicts(stockHoldings, positionsDict)
-            return clean(mergedDict)
+#         time.sleep(20)
+#         with open(os.path.join(os.getcwd(), 'requestResponse.txt'), 'r') as secondFile:
+#             stockHoldings = eval(secondFile.read().replace('true', 'True').replace('false', 'False')).get('data')
+#             mergedDict = mergeDicts(stockHoldings, positionsDict)
+#             return clean(mergedDict)

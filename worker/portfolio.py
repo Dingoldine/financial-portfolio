@@ -1,51 +1,16 @@
 import numpy as np
 import pandas as pd
-import json
 from typing import Dict
-# financial apis 
-# from pandas_datareader.iex import IEX
-# from alpha_vantage.timeseries import TimeSeries
-# from alpha_vantage.sectorperformance import SectorPerformances
-
-# from __future__ import print_function
-# import intrinio_sdk
-# from intrinio_sdk.rest import ApiException
-# from pprint import pprint
-
 import constants
 from io import StringIO 
 from bs4 import BeautifulSoup
-import time
 from collections import OrderedDict
 from helpermodules import Excel, Utils
 import constants
-#load .env file 
-from dotenv import load_dotenv
-load_dotenv()
-#access dotenv variables
-import os
-import sys
-import re
-
 # for complex string matching
-from fuzzywuzzy import fuzz, process
-
-# try:  
-#    alphaVantageKey = os.environ.get("ALPHA_VANTAGE_APIKEY")
-#    iexCloudKey = os.environ.get("IEX_CLOUD_APIKEY")
-#    intrinioKey = os.environ.get("INTRINIO_APIKEY")
-# except KeyError: 
-#    print("Please set the environment variables")
-#    sys.exit(1)
-   
-# # setup api 
-# intrinio_sdk.ApiClient().configuration.api_key['api_key'] = intrinioKey
-# sp = SectorPerformances(key=alphaVantageKey, output_format='pandas')
-# ts = TimeSeries(key=alphaVantageKey,output_format='pandas', indexing_type='integer')
+# from fuzzywuzzy import fuzz, process
 
 class Portfolio:
-
-    bank = 'Avanza'         #   class variables shared by all instances
     #   Constraints
     tot_weight_stocks = 0.2
     tot_weight_funds = 0.8
@@ -72,7 +37,12 @@ class Portfolio:
             self.target_nordic + self.target_alternative + self.target_eu == 1) # make sure fund allocation rules make sense
         
         avanza_stocks = pd.read_json(StringIO(avanza_holdings.get("Stocks", pd.DataFrame(columns=[]).to_json())), orient='index')
-        
+        funds = pd.read_json(StringIO(avanza_holdings.get("Funds", pd.DataFrame(columns=[]).to_json())), orient='index')
+        etfs = pd.read_json(StringIO(avanza_holdings.get("ETFs", pd.DataFrame(columns=[]).to_json())),orient='index')
+        self.certificates = pd.read_json(StringIO(avanza_holdings.get("Certificates",  pd.DataFrame(columns=[]).to_json())), orient='index')
+        self.summary = pd.read_json(StringIO(avanza_holdings.get("Potfolio Summary",  pd.DataFrame(columns=[]).to_json())), orient='index')
+
+        # formating degiro frame
         degiro_stocks = pd.DataFrame.from_dict(degiro_holdings, orient='index')
         degiro_stocks = degiro_stocks[degiro_stocks["productType"] == "STOCK"]
         degiro_stocks.drop("productType", axis=1, inplace=True)
@@ -81,29 +51,35 @@ class Portfolio:
         degiro_stocks.columns = degiro_stocks.columns.str.capitalize()
         col_dict = {'Breakevenprice': 'Purchase Price','Size': 'Shares', 'Name': 'Asset', 'Value': 'Market Value (SEK)', 'Price': 'Latest Price'}   ## key→old name, value→new name
         degiro_stocks.columns = [col_dict.get(x, x) for x in degiro_stocks.columns]
-        degiro_stocks['Change'] = degiro_stocks['Latest Price'] / degiro_stocks['Purchase Price'] - 1
+        degiro_stocks['Change'] = (degiro_stocks['Latest Price'] / degiro_stocks['Purchase Price'] - 1)
         degiro_stocks['Profit'] = degiro_stocks['Market Value (SEK)'] * degiro_stocks['Change'] - 1
         degiro_stocks.reset_index(inplace=True, drop=True)
         
+        # format change column
+        avanza_stocks['Change'] = avanza_stocks['Change']/100
+        funds['Change'] = funds['Change']/100
+        if not etfs.empty:
+            etfs['Change'] = etfs['Change']/100
+        if not self.certificates.empty:
+            self.cert_value = self.certificates['Market Value (SEK)'].sum()
+            self.certificates['Weight'] = self.certificates['Market Value (SEK)'] /  self.cert_value
+            self.certificates['Change'] = self.certificates['Change']/100
+        else:
+            self.cert_value = 0
+
+
+        # create stock frame
         stock_frames = [avanza_stocks, degiro_stocks]
         self.stocks = pd.concat(stock_frames, ignore_index=True)
         self.stocks.name = "Stocks"
+        
 
-
-        funds = pd.read_json(StringIO(avanza_holdings.get("Funds", pd.DataFrame(columns=[]).to_json())), orient='index')
-        etfs = pd.read_json(StringIO(avanza_holdings.get("ETFs", pd.DataFrame(columns=[]).to_json())),orient='index')
         # merge ETFs and Funds
         frames = [funds, etfs]
         concat_funds = pd.concat(frames, keys=['Funds', 'ETFs'])
         self.funds = concat_funds
-        self.certificates = pd.read_json(StringIO(avanza_holdings.get("Certificates",  pd.DataFrame(columns=[]).to_json())), orient='index')
-        self.summary = pd.read_json(StringIO(avanza_holdings.get("Potfolio Summary",  pd.DataFrame(columns=[]).to_json())), orient='index')
 
-        if not self.certificates.empty:
-            self.cert_value = self.certificates['Market Value (SEK)'].sum()
-            self.certificates['Weight'] = self.certificates['Market Value (SEK)'] /  self.cert_value
-        else:
-            self.cert_value = 0
+
         self.stocks_value = self.stocks['Market Value (SEK)'].sum()   
         self.funds_value = self.funds['Market Value (SEK)'].sum()
         
@@ -112,12 +88,14 @@ class Portfolio:
 
         assert(np.isclose(self.stocks["Weight"].sum(), 1, rtol=1e-03, atol=1e-04))
         assert(np.isclose(self.funds['Weight'].sum(), 1, rtol=1e-03, atol=1e-04))
-        
+        assert(np.isclose(self.certificates['Weight'].sum(), 1, rtol=1e-03, atol=1e-04))
+
+        self.certificates["is_fund"] = True
         self.funds["is_fund"] = True
         self.stocks["is_fund"] = False
 
         self.portfolio_value = self.stocks_value + self.funds_value + self.cert_value
-        self.portfolio = pd.concat([self.stocks, self.funds], ignore_index=True)
+        self.portfolio = pd.concat([self.stocks, self.funds, self.certificates], ignore_index=True)
         self.portfolio['Weight_Portfolio'] = self.portfolio['Market Value (SEK)'] /  self.portfolio_value
         self.portfolio.name = "Portfolio"
 
@@ -127,12 +105,11 @@ class Portfolio:
         return self.funds
     def getPortfolio(self):
         return self.portfolio
-
-       
     def generateStocksExcel(self):
         Excel.create([self.stocks], "Stocks", 1)
-    
-    def checkRules(self):
+
+"""     
+        def checkRules(self):
         stock_weight = self.stocks_value/self.portfolio_value
         fund_weight = self.funds_value/self.portfolio_value
         cert_weight = self.cert_value/self.portfolio_value
@@ -152,15 +129,15 @@ class Portfolio:
         elif not( fund_weight + cert_weight <= Portfolio.tot_weight_funds  + allowedFundTargetDeviation):
             print('too much money in funds')
         
-    def parseFundDetailsPage(self, instrument):
-        html = Utils.readTxtFile(instrument)
+    def _parseFundDetailsPage(self, html):
+        #html = Utils.readTxtFile(instrument)
         soup = BeautifulSoup(html, 'lxml')
-        fee_tag = soup.find("h3", attrs= {'data-e2e': 'fon-guide-total-fee'})
+        fee_tag = soup.find("h2", attrs= {'data-e2e': 'fon-guide-total-fee'})
 
         if (fee_tag):
             fee = fee_tag.text.strip()
         else:
-            raise Exception("Attribute 'data-e2e': 'fon-guide-total-fee' not fouund")
+            raise Exception("Attribute 'data-e2e': 'fon-guide-total-fee' not found")
 
         keyData = soup.find_all('div', {'class': 'border-space-item'})
         
@@ -255,7 +232,7 @@ class Portfolio:
                 
         return {'key-data': keyDataDF, 'instruments': stocksDF, 'sectors': sectorDF, 'countries': countryDF}
 
-    def fundsBreakdown(self):
+    def fundsBreakdown(self, fund_details):
         print("#################### FUNDS #####################")
         df = self.funds
         Utils.printDf(df)
@@ -264,7 +241,7 @@ class Portfolio:
         finalInstrumentAlloc = pd.DataFrame(columns=[0, 1])
         for instrument in df['Asset']:
             print('instrument: ', instrument)
-            data = self.parseFundDetailsPage(instrument)
+            data = self._parseFundDetailsPage(fund_details.get(instrument))
             fundData = data.get('key-data')
             # add fund data to the fund dataframe
             for row in fundData.itertuples():
@@ -655,11 +632,13 @@ class Portfolio:
         print("#################### STOCKS #####################")
         for asset in self.stocks['Asset']: 
             self.damodaranStockLookup(asset)
-            self.nasdaqStockFinancials(asset)
+            #self.nasdaqStockFinancials(asset)
 
 
 
         #leftMostCol = self.stocks.columns.values[0]
         #self.stocks.set_index(leftMostCol, inplace=True) # Turn this column to index
 
-        print("#################### END OF STOCKS #####################")
+        print("#################### END OF STOCKS #####################") 
+        
+"""
