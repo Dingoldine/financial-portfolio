@@ -226,10 +226,11 @@ class Database:
                 {select_list}
             FROM
                 portfolio
-            WHERE is_fund=FALSE
+            WHERE is_fund=FALSE AND dt=(select MAX(dt) from portfolio)
             ORDER BY
                 asset,
                 dt DESC) AS t; """
+
         self.query(query)
         self.commit()
         result = self.cursor.fetchall()
@@ -265,12 +266,13 @@ class Database:
         SELECT
             coalesce(JSON_AGG(t), NULL)
         FROM ( SELECT DISTINCT ON (asset)
-                {select_list}
+            {select_list}
             FROM
                 portfolio
+            WHERE dt=(select MAX(dt) from portfolio)
             ORDER BY
-                asset,
-                dt DESC) AS t; """
+                asset)  AS t;;
+       """
         self.query(query)
         self.commit()
         result = self.cursor.fetchall()

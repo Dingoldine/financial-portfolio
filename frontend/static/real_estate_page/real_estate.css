@@ -1,0 +1,29 @@
+figure {
+    width: inherit;
+    padding-top: 1.2rem;
+}
+figure img {
+    width:  inherit;
+    height: 222px;
+}
+figure table {
+    width: inherit;
+    font-size: 12px;
+}
+
+article {
+    transition: 0.5s;
+    margin-bottom: 3.5em;
+}
+
+article:hover {
+    box-shadow: 0 5px 15px rgb(0 0 0 / 80%);
+    border-radius: 2%;
+    background: #d6bd9b;
+    transform-origin: top;
+    transform: scale(1.02, 1.02);
+}
+
+aside p {
+    font-size: 0.7em;
+}

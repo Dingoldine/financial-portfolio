@@ -5,7 +5,6 @@ import requests
 from fastapi import FastAPI, Request, Response, HTTPException
 from pydantic import BaseModel
 from fastapi.responses import HTMLResponse, FileResponse, RedirectResponse
-#import scrapers.avanza_scraper as avanza_scraper
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
@@ -21,22 +20,22 @@ templates = Jinja2Templates(directory="static")
 
 
 @app.on_event("startup")
-async def startup():
+def startup():
     print("starting server....")
 
 
 @app.on_event("shutdown")
-async def shutdown():
+def shutdown():
     print("server shutting down....")
 
 
-@app.get("/", response_class=HTMLResponse)
-async def root(request: Request):
+@app.get("/")
+def root(response_model: RedirectResponse):
     return RedirectResponse("/portfolio")
 
 
 @app.get("/portfolio")
-async def get_portfolio(request: Request, response_class=HTMLResponse):
+def get_portfolio(request: Request, response_model: HTMLResponse):
     res = requests.get(f'http://{SERVER_HOST_ADDRESS}/getPortfolio')
 
     if res.status_code == 200:
@@ -54,7 +53,7 @@ async def get_portfolio(request: Request, response_class=HTMLResponse):
 
 
 @app.get("/stocks")
-async def get_stocks(request: Request, response_class=HTMLResponse):
+def get_stocks(request: Request):
     res = requests.get(f'http://{SERVER_HOST_ADDRESS}/getStocks')
 
     if (res.status_code) == 200:
@@ -78,16 +77,13 @@ class Stock(BaseModel):
     isin: str
     latest_price: float
     market_value_sek: float
-    profit:  Optional[float]
     purchase_price: float
     weight: float
     shares: int
     symbol: str
     asset_class: Optional[str]
-
-
 @app.put("/portfolio/update")
-async def update_stock(stock: Stock, response_model=Stock):
+def update_stock(stock: Stock, response_model=Stock):
     print(stock.dict())
     res = requests.put(
         f'http://{SERVER_HOST_ADDRESS}/updateStock', json=stock.dict())
@@ -95,24 +91,17 @@ async def update_stock(stock: Stock, response_model=Stock):
         content = res.json()
         msg = content.get("message")
         print(msg)
-        return stock
+        return stock.dict()
     else:
         print(res.json())
         raise HTTPException(status_code=res.status_code, detail="Error")
 
-    # res = requests.get(f'http://{SERVER_HOST_ADDRESS}/getStocks')
-
-    # if (res.status_code) == 200:
-    #     content = res.json()
-    #     stock_data = content.get("data")
-    #     print(json.dumps(stock_data, indent=2))
-    #     return templates.TemplateResponse("/stock_page/stocks.html", {"request": request, "stock_data": stock_data})
-    # else:
-    #     raise(HTTPException(status_code=res.status_code, detail="Error"))
-
+@app.get("/real-estate")
+def get_real_estate(request: Request):
+    return templates.TemplateResponse("/real_estate_page/real_estate.html", {"request": request})
 
 @app.get("/funds")
-async def get_funds(request: Request, response_class=HTMLResponse):
+def get_funds(request: Request):
     res = requests.get(f'http://{SERVER_HOST_ADDRESS}/getFunds')
 
     if (res.status_code) == 200:
@@ -129,9 +118,7 @@ async def get_funds(request: Request, response_class=HTMLResponse):
         raise HTTPException(status_code=res.status_code, detail="Error")
 
 @app.get("/portfolio/update")
-def update_portfolio(request: Request, response_class=HTMLResponse):
-    # avanza_scraper.scrape()
-    # return {"message": "Update Portfolio"}
+def update_portfolio(request: Request):
     res = requests.get(f'http://{SERVER_HOST_ADDRESS}/doRefresh')
     if res.status_code == 200:
         data = res.json()
@@ -142,7 +129,7 @@ def update_portfolio(request: Request, response_class=HTMLResponse):
 
 
 @app.get("/subscribe/qr")
-def subscribe_qr():
+def subscribe_qr(request: Request):
     res = requests.get(f'http://{SERVER_HOST_ADDRESS}/getQRBinary')
     if res.status_code == 200:
         data = res.json()
@@ -160,8 +147,3 @@ def subscribe(job):
         return data
     else:
         raise HTTPException(status_code=res.status_code, detail="Error")
-
-@app.get("/portfolio/download")
-def download_portfolio():
-    # return FileResponse(f'{constants.excelSaveLocation}/portfolio.xlsx', media_type='application/octet-stream',filename="portfolio.xlsx")
-    return {"message": "Update Portfolio"}

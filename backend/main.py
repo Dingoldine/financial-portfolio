@@ -132,7 +132,6 @@ class Stock(BaseModel):
     symbol: str
     asset_class: Optional[str]
 
-
 @app.put('/updateStock')
 def update_stock(stock: Stock, db_session: Session = Depends(get_db)):
     print(stock)

@@ -4,13 +4,15 @@
 {% block content %}
 <link rel="stylesheet" href="../static/funds_page/funds.css" type="text/css" />
 <h1 class="main-header">Funds Breakdown</h1>
-<section class="row justify-content-left">
-  <article class="col-lg-7">
+<section class="first-row row">
+  <article class="col-md-8">
+    <h6>Holdings</h6>
     <div class="graph-wrapper">
       <div id="treemap"></div>
     </div>
   </article>
-  <article class="col-lg-5 align-self-center">
+  <article class="col-md-4 align-self-center">
+    <h6>Currency Exposure</h6>
     <div class="graph-wrapper donut-wrapper">
       <div id="donut"></div>
     </div>
@@ -72,7 +74,7 @@
         bottom: 10,
         left: 0
       },
-      width = 950 - margin.left - margin.right,
+      width = 1250 - margin.left - margin.right,
       height = 880 - margin.top - margin.bottom;
 
     // And a opacity scale
@@ -342,7 +344,7 @@
       .append('polyline')
       .attr("stroke", "grey")
       .style("fill", "none")
-      .attr("stroke-width", 1)
+      .attr("stroke-width", '0.2%')
       .attr('points', function (d) {
         const posA = arc.centroid(d) // line insertion in the slice
         const posB = outerArc.centroid(
@@ -522,7 +524,7 @@
         const mousex = d3.pointer(event, svg.node());
         vertical.style("display", null).attr("d", function () {
           let d = "M" + mousex[0] + "," + (height);
-          d += " " + mousex[0] + "," + '10px';
+          d += " " + mousex[0] + "," + '10';
           return d;
         });
 
@@ -550,7 +552,7 @@
       .on('submit', '[contenteditable]', function (event) {
 
         const updatedfundRow = Array.from(event.currentTarget.parentElement.cells).map(function (el) {
-          const content = el.innerHTML.trim().replace("<br>", "");
+          const content = el.textContent.trim().replace("<br>", "");
           const isNumber = parseFloat(content)
           return (isNumber) ? isNumber : content
         })
