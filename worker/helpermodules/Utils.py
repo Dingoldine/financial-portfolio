@@ -1,6 +1,5 @@
 import pandas as pd
-import os, xlrd
-from openpyxl import load_workbook
+import xlrd
 import constants
 import logging
 

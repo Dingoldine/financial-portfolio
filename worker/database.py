@@ -5,9 +5,6 @@ import psycopg2
 import pandas as pd
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy import pool, create_engine, Integer, String, Numeric, Float, Boolean, DateTime, BigInteger, text
-#import numpy as np
-
-
 class Database:
 
     def __init__(self):
@@ -101,9 +98,8 @@ class Database:
             """,
             """ 
             CREATE TABLE IF NOT EXISTS qr_table (
-                qr_code TEXT,
-                ts TIMESTAMP WITHOUT TIME ZONE,
-                PRIMARY KEY (md5(qr_code), ts)
+                qr_code TEXT NOT NULL,
+                ts TIMESTAMP WITHOUT TIME ZONE NOT NULL
             );
             """
         )
@@ -124,24 +120,25 @@ class Database:
         self.query(query)
         self.commit()
 
-    def create_table_from_df(self, json, table_name):
+    """
+        drop manually because of bug
+        see locks query
+        self.query('select pid, usename, pg_blocking_pids(pid) as blocked_by, query as blocked_query from pg_stat_activity where cardinality(pg_blocking_pids(pid)) > 0;')
+        clear locks query
+        self.query("SELECT pg_cancel_backend(pid) FROM pg_stat_activity WHERE pid <> pg_backend_pid();")
+        self.query(f'DROP TABLE IF EXISTS {tableName} CASCADE;')
+        self.commit()
+        df.reset_index(inplace=True)
+        df.rename(columns={ df.columns[0]: 'asset' }, inplace=True)
 
-        # # drop manually because of bug
-        # # see locks query
-        # self.query('select pid, usename, pg_blocking_pids(pid) as blocked_by, query as blocked_query from pg_stat_activity where cardinality(pg_blocking_pids(pid)) > 0;')
-        # # clear locks query
-        # self.query("SELECT pg_cancel_backend(pid) FROM pg_stat_activity WHERE pid <> pg_backend_pid();")
-        # self.query(f'DROP TABLE IF EXISTS {tableName} CASCADE;')
-        # self.commit()
+    """
+    def create_table_from_df(self, json, table_name):
 
         df = pd.read_json(StringIO(json), orient='index')
         df['dt'] = pd.datetime.now().date()
         df['asset_class'] = 'undefined'
         df.columns = df.columns.str.replace(
             ' ', '_').str.lower().str.replace('(', '').str.replace(')', '')
-        # df.reset_index(inplace=True)
-
-        #df.rename(columns={ df.columns[0]: 'asset' }, inplace=True)
 
         def change_type(x):
             switcher = {
@@ -227,10 +224,11 @@ class Database:
                 {select_list}
             FROM
                 portfolio
-            WHERE is_fund=FALSE
+            WHERE is_fund=FALSE AND dt=(select MAX(dt) from portfolio)
             ORDER BY
                 asset,
                 dt DESC) AS t; """
+
         self.query(query)
         self.commit()
         result = self.cursor.fetchall()
@@ -266,12 +264,13 @@ class Database:
         SELECT
             coalesce(JSON_AGG(t), NULL)
         FROM ( SELECT DISTINCT ON (asset)
-                {select_list}
+            {select_list}
             FROM
                 portfolio
+            WHERE dt=(select MAX(dt) from portfolio)
             ORDER BY
-                asset,
-                dt DESC) AS t; """
+                asset)  AS t;;
+       """
         self.query(query)
         self.commit()
         result = self.cursor.fetchall()

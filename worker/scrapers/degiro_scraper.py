@@ -3,14 +3,6 @@ import requests, json
 from requests.models import Response
 from requests.sessions import Session
 from requests.exceptions import HTTPError
-import configparser, os
-import pandas as pd
-from io import StringIO
-import time
-
-# for 2FA later
-#twoFactorEndpoint = "https://trader.degiro.nl/login/secure/login/totp"
-#payload= {"username":"XXXX","password":"XXXX","queryParams":{},"oneTimePassword":"XXXX"}
 
 BASE_URL =  "https://trader.degiro.nl"
 Config = configparser.ConfigParser()
@@ -44,9 +36,6 @@ def printSession(s: Session):
 
 def extractSessionID(s: Session):
     return s.cookies.get_dict().get('JSESSIONID')
-
-# def extractAccountInfo(res: Response):
-#     https://trader.degiro.nl/trading/secure/v5/account/info/121008181;jsessionid=5E4877BF0E02E8F8CD70AC15F3DDFE67.prod_b_114_1
 
 def clean(d: Dict):
     keys_to_be_deleted = [
@@ -97,11 +86,6 @@ def clean(d: Dict):
 
     return d
 
-# def extractAccountID(res: Response):
-#     print(res.content)
-#     print(res.text.replace())
-#     return '121008181'
-
 def parseHoldings(data: Dict, portfolio: Dict): # res: Response, 
         holdingsDict = data.get("data")
         return clean(mergeDicts(holdingsDict, portfolio))
@@ -129,10 +113,8 @@ def scrape():
             request_headers = {
                 'Host': 'trader.degiro.nl',
                 'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64; rv:78.0) Gecko/20100101 Firefox/78.0',
-                # 'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
                 'Accept-Language': 'en-US,en;q=0.5',
                 'Accept-Encoding': 'gzip, deflate',
-                # 'Referer': 'https://trader.degiro.nl/login/se',
                 'Upgrade-Insecure-Requests': '1',
                 'Connection': 'keep-alive'
             }
@@ -170,9 +152,6 @@ def scrape():
 
             session.headers.update({'referer': 'https://trader.degiro.nl/trader/'})
             
-            #session.post(f'{BASE_URL}/v5/products/info?intAccount={intAccount}&sessionId={sessionID}')
-            #print(brotli.decompress(res.content))
-
             res = session.post(f'{BASE_URL}/product_search/secure/v5/products/info?intAccount={intAccount}&sessionId={sessionID}', json=productIDs)
             checkError(res)
             response_data = parseResponse(res, session)
@@ -194,26 +173,3 @@ def mergeDicts(d1: Dict, d2: Dict):
             if k in d1.keys(): d3.update({k: d1[k]})
             elif k in d2.keys(): d3.update({k: d2[k]})
     return d3
-
-
-
-# def scrapeTEST():
-#     with open(os.path.join(os.getcwd(), 'portfolioResponse.json'), "r") as file:
-#         portfolioList = eval(file.read().replace('true', 'True').replace('false', 'False')).get("portfolio").get("value")
-#         positionsDict = {}
-#         interestingFields = ["id","value", "size", "price", "breakEvenPrice"]
-#         for position in portfolioList:
-#             fieldDict = {}
-#             for field in position.get("value"):
-#                 fieldKey = field.get("name") 
-#                 if fieldKey in interestingFields:
-#                     val = field.get("value")
-#                     fieldDict.update({fieldKey: val})
-#             positionsDict.update({position.get("id"): fieldDict})
-
-
-#         time.sleep(20)
-#         with open(os.path.join(os.getcwd(), 'requestResponse.txt'), 'r') as secondFile:
-#             stockHoldings = eval(secondFile.read().replace('true', 'True').replace('false', 'False')).get('data')
-#             mergedDict = mergeDicts(stockHoldings, positionsDict)
-#             return clean(mergedDict)
