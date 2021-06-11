@@ -4,7 +4,8 @@ Portfolio analysis software
 
 ## KNOWN BUGS
 
-None
+CSS error on data table in Chrome browser
+Can spam the /portfolio/update endpoint to fill up MQ queue
 
 ## Saved Commands
 

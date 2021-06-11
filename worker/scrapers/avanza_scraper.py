@@ -69,7 +69,7 @@ def _parseHTML(data):
         for table in tables[:4]:
             captionTag = table.find('h2')
             # only parse if they have a caption
-            if(captionTag != None):
+            if(captionTag is not None):
                 caption = captionTag.text.strip()
                 headers, rows = _parseTable(table)
                 df, err = _buildDataframe(headers, rows, caption)
@@ -300,6 +300,7 @@ def _loginToAvanza(url, dbModel):
         Utils.log_error(e)
         browser.quit()
         raise
+
 
 def scrape(dbModel):
 

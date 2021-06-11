@@ -11,26 +11,30 @@ import sys
 Config = configparser.ConfigParser()
 Config.read('./config.ini')
 
-
-if Config["NETWORK-MODE"]["localhost"] == True:
+# Connection details
+if Config["NETWORK-MODE"]["localhost"] is True:
     CELERY_BROKER = f'pyamqp://{Config["CELERY"]["RABBITMQ_DEFAULT_USER"]}:{Config["CELERY"]["RABBITMQ_DEFAULT_PASS"]}@localhost'
     CELERY_BACKEND = 'redis://localhost:6379/0'
 else:
     CELERY_BROKER = f'pyamqp://{Config["CELERY"]["RABBITMQ_DEFAULT_USER"]}:{Config["CELERY"]["RABBITMQ_DEFAULT_PASS"]}@{Config["CELERY"]["RABBITMQ_HOSTNAME"]}'
     CELERY_BACKEND = f'redis://{Config["REDIS"]["REDIS_HOSTNAME"]}:6379/0'
-# Create the celery app and get the logger
+
+# Create the celery app and get  logger
 try:
     celery_app = Celery('portfolio_worker',
                         broker=CELERY_BROKER, backend=CELERY_BACKEND)
     celery_app.config_from_object(celeryconfig)
+
+    logger = get_task_logger(__name__)
+
+    db = None
+
 except Exception:
     print("Could not configure celery")
     sys.exit(-1)
 
 
-db = None
-
-
+# Initialize db connection on startup
 @worker_process_init.connect
 def init_worker(**kwargs):
     global db
@@ -42,6 +46,7 @@ def init_worker(**kwargs):
         raise
 
 
+# Disconnect from db on shutdown
 @worker_process_shutdown.connect
 def shutdown_worker(**kwargs):
     global db
@@ -50,23 +55,9 @@ def shutdown_worker(**kwargs):
         db.disconnect()
 
 
-logger = get_task_logger(__name__)
-
-
-# @celery_app.on_after_configure.connect
-# def setup_periodic_tasks(sender, **kwargs):
-
-#     # Executes every Monday morning at 7:30 a.m.
-#     sender.add_periodic_task(
-#         crontab(hour=22, minute=14, day_of_week=3),
-#         updatePortfolio.s(),
-#     )
-
-
 @celery_app.task(bind=True, serializer='json')
 def updateDBTEST(self, portfolio):
     logger.info("----Updating db----")
-    # logger.info(portfolio)
     try:
         time.sleep(5)
         return {'message': 'job completed successfully'}
@@ -77,10 +68,7 @@ def updateDBTEST(self, portfolio):
 @celery_app.task(bind=True, serializer='json')
 def updateDB(self, portfolio):
     logger.info("----Updating db----")
-    # logger.info(portfolio)
     try:
-        #db.create_table_from_df(portfolio.get('stocks'), "stocks")
-        #db.create_table_from_df(portfolio.get('funds'), "funds")
         db.create_table_from_df(portfolio.get('portfolio'), "portfolio")
         logger.info("----Updating db completed successfully----")
         return {'message': 'job completed successfully'}
@@ -126,6 +114,9 @@ def do_on_error(*args, **kwargs):
     return "OK do_on_error"
 
 
+# Main Task
+# Calls all subtasks in following order
+# (scrapeAvanza, scrapeDegiro) in parallel -> constructPortfolio -> updateDB
 @celery_app.task(bind=True, serializer='json')
 def updatePortfolio(self):
     try:
