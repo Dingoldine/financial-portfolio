@@ -87,8 +87,11 @@
                 
             }
 
-            if (message == "SUCCESS" | message == "FAILURE") {
-                return
+            if (message == "SUCCESS") {
+                window.location.pathname = '/portfolio/update/success'
+            }
+            else if (message == "FAILURE") {
+                window.location.pathname = '/portfolio/update/failure'
             }
             // Call subscribe() again in one second to get the next message
             await new Promise(resolve => setTimeout(resolve, 4000));

@@ -127,6 +127,14 @@ def update_portfolio(request: Request):
     else:
         raise HTTPException(status_code=res.status_code, detail="Error")
 
+@app.get("/portfolio/update/success")
+def update_portfolio_success(request: Request):
+    return templates.TemplateResponse("/success/success.html", {"request": request})
+
+@app.get("/portfolio/update/failure")
+def update_portfolio_failure(request: Request):
+    return templates.TemplateResponse("/failure/failure.html", {"request": request})
+
 
 @app.get("/subscribe/qr")
 def subscribe_qr(request: Request):

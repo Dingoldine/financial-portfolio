@@ -64,6 +64,7 @@ class Portfolio:
             self.cert_value = self.certificates['Market Value (SEK)'].sum()
             self.certificates['Weight'] = self.certificates['Market Value (SEK)'] /  self.cert_value
             self.certificates['Change'] = self.certificates['Change']/100
+            assert(np.isclose(self.certificates['Weight'].sum(), 1, rtol=1e-03, atol=1e-04))
         else:
             self.cert_value = 0
 
@@ -88,7 +89,7 @@ class Portfolio:
 
         assert(np.isclose(self.stocks["Weight"].sum(), 1, rtol=1e-03, atol=1e-04))
         assert(np.isclose(self.funds['Weight'].sum(), 1, rtol=1e-03, atol=1e-04))
-        assert(np.isclose(self.certificates['Weight'].sum(), 1, rtol=1e-03, atol=1e-04))
+ 
 
         self.certificates["is_fund"] = True
         self.funds["is_fund"] = True

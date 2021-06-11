@@ -1,0 +1,15 @@
+
+{% extends 'base.html' %}
+{% block title %}Update Failure{% endblock %}
+{% set active_page = 'Update Failure' %}
+{% block content %}
+<link rel="stylesheet" href="../../static/failure/failure.css" type="text/css" />
+<section class="container">
+    <img id="failure-img" src="../../static/assets/error.png" alt=""/>
+    <br />
+    <h3>Portfolio Update Failed :(
+        <br /> Return to main page and try again later!</h3>
+    <br />
+    <a class="button" type="button" href="/">Go Back</a>
+</section>
+{% endblock %}

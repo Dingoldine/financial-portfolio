@@ -1,7 +1,6 @@
-from celery import Celery, chain, chord, group
+from celery import Celery, chain, chord
 from celery.utils.log import get_task_logger
-from celery.schedules import crontab
-from scrapers import avanza_scraper, nasdaq_omx_scraper, degiro_scraper
+from scrapers import avanza_scraper, degiro_scraper
 from portfolio import Portfolio
 from database import Database
 import celeryconfig
@@ -54,14 +53,14 @@ def shutdown_worker(**kwargs):
 logger = get_task_logger(__name__)
 
 
-@celery_app.on_after_configure.connect
-def setup_periodic_tasks(sender, **kwargs):
+# @celery_app.on_after_configure.connect
+# def setup_periodic_tasks(sender, **kwargs):
 
-    # Executes every Monday morning at 7:30 a.m.
-    sender.add_periodic_task(
-        crontab(hour=22, minute=14, day_of_week=3),
-        updatePortfolio.s(),
-    )
+#     # Executes every Monday morning at 7:30 a.m.
+#     sender.add_periodic_task(
+#         crontab(hour=22, minute=14, day_of_week=3),
+#         updatePortfolio.s(),
+#     )
 
 
 @celery_app.task(bind=True, serializer='json')

@@ -1,3 +1,19 @@
+
+#checkmark-container {
+  border-radius:200px;
+  height:200px; 
+  width:200px;
+  background: #F8FAF5; 
+  margin:0 auto;
+  }
+
+i {
+  color: #9ABC66;
+  font-size: 100px;
+  line-height: 200px;
+  margin-left:-15px;
+}
+
 #qr-code-wrapper {
     padding: 80px;
     display: flex;

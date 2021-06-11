@@ -10,7 +10,6 @@ h1, h2, h3, h4, h5, h6 {
   font-weight: 400;
 }
 
-
 .main-header {
   font-size: 1.75em;
   padding: 70px 0 0 0;
@@ -27,72 +26,87 @@ h1, h2, h3, h4, h5, h6 {
 } 
 
 .thead-dark {
-    background: #1c1d1d4a;
-    color: white;
-    border-style: unset;
-    text-transform: uppercase;
-  }
+  background: #1c1d1d4a;
+  color: white;
+  border-style: unset;
+  text-transform: uppercase;
+}
   
-  .editable_cell {
-    display:inline;
-  }
- 
-  #area {
-    position: relative;
-  }
-  .tooltip {
-    opacity: 0.7;
-    background-color: black;
-    position: absolute;
-    color: white;
-    padding: 5px 15px 5px 15px;
-    border-radius: 15px;
-  }
-  .treemap-rect-symbol {
-   font-size: 15px;
-   fill: white;
-  }
-  .treemap-rect {
-    stroke: black;
-  }
-  .treemap-rect-values {
-    font-size: 11px;
-    fill: white;
-  }
-  .treemap-group-headings {
-    fill: grey;
-    font-size: 13px;
-  }
+.editable_cell {
+  display:inline;
+}
 
-  .donut-chart-path {
-    stroke-width: 2px;
-    opacity: 0.8;
-    transform: translate(0, 0);
-  }
+#area {
+  position: relative;
+  max-width: 1700px;
+  margin: auto;
+}
 
-  .treemap-svg {
-    max-width: 100%;
-    min-width: 80%;
-    min-height: 80%;
-  }
+.tooltip {
+  opacity: 0.7;
+  background-color: black;
+  position: absolute;
+  color: white;
+  padding: 5px 15px 5px 15px;
+  border-radius: 15px;
+}
 
-  .table-wrapper {
-    text-align: center;
-    height: fit-content;
-    width: 100%;
-    padding: 2em;
-    max-width: -moz-fit-content;
-    margin: auto;
-  }
-  table tr:hover {
-    background: rgba(131, 101, 251, 0.1) !important;
-    color: rgb(53, 173, 216);
-  }
+.treemap-rect-symbol {
+  font-size: 15px;
+  fill: white;
+}
 
-  .donut-wrapper {
-    padding: 1em !important;
-    max-width: 400px;
-  }
+.treemap-rect {
+  stroke: black;
+}
+
+.treemap-rect-values {
+  font-size: 11px;
+  fill: white;
+}
+.treemap-group-headings {
+  fill: grey;
+  font-size: 13px;
+}
+
+.donut-chart-path {
+  stroke-width: 2px;
+  opacity: 0.8;
+  transform: translate(0, 0);
+}
+
+.treemap-svg {
+  min-width: 80%;
+  min-height: 80%;
+}
+
+#treemap {
+  max-width: 1500px;
+  margin: auto;
+}
+
+.table-wrapper {
+  text-align: center;
+  height: fit-content;
+  width: 100%;
+  padding: 2em;
+  max-width: -moz-fit-content;
+  margin: auto;
+}
+
+table tr:hover {
+  background: rgba(131, 101, 251, 0.1) !important;
+  color: rgb(53, 173, 216);
+}
+
+.donut-wrapper {
+  padding: 1em !important;
+}
+
+#donut {
+  max-width: 500px;
+  margin: auto; 
+}
 /*   
   .dataTables_scrollHeadInner {
     margin: 0 auto;
@@ -102,9 +116,9 @@ h1, h2, h3, h4, h5, h6 {
     width: 100% !important;
   } */
 
-  .graph-wrapper {
-    width: -moz-fit-content;
-    padding: 1em;
-    margin: auto;
-    min-width: 80%;
-  }
+.graph-wrapper {
+  width: -moz-fit-content;
+  padding: 1em;
+  margin: auto;
+  min-width: 80%;
+}
