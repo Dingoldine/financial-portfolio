@@ -2,10 +2,6 @@ version: "3.8"
 services:
   frontend:
     build: ./frontend
-    volumes:
-      - type: bind
-        source: /Users/philiprumman/Projects/financial-portfolio/frontend
-        target: /app
     ports:
       - 8080:80
     depends_on:
@@ -13,37 +9,17 @@ services:
   timescaledb: 
     image: docker.io/timescale/timescaledb:2.2.0-pg13
     env_file: ./env/postgres.env 
-    ports: 
-      - 5432:5432
-  # postgres:
-  #   image: docker.io/postgres:13.1
-  #   env_file: ./env/postgres.env
-  #   ports:
-  #     - 5432:5432
+    expose: 
+      - 5432
   backend:
     build: ./backend
-    #entrypoint: watchmedo auto-restart --recursive --pattern="*.py" --directory="." python3 main.py
-    volumes:
-      - type: bind
-        source: /Users/philiprumman/Projects/financial-portfolio/backend/main.py
-        target: /app/main.py
-      - type: bind
-        source: /Users/philiprumman/Projects/financial-portfolio/backend/database.py
-        target: /app/database.py
+    expose: 
+      - 80
     depends_on:
       - timescaledb
       - worker
   worker:
     build: ./worker
-    volumes:
-      - type: bind
-        source: /Users/philiprumman/Projects/financial-portfolio/worker/portfolio.py
-        target: /app/portfolio.py
-      - type: bind
-        source: /Users/philiprumman/Projects/financial-portfolio/worker/portfolio_worker.py
-        target: /app/portfolio_worker.py
-    # environment:
-    #   - C_FORCE_ROOT=true
     entrypoint: celery -A portfolio_worker worker -c 2 --loglevel=info -Q default,celery
     depends_on:
       - rabbit
@@ -59,9 +35,7 @@ services:
     image: redis:6.2.1
     hostname: redisdb
     volumes:
-        - /Users/philiprumman/Projects/financial-portfolio/worker/redis.conf:/redis.conf
+      - ./redis.conf:/redis.conf
     command: [ "redis-server", "/redis.conf" ]
-    ports: 
-      - 6379:6379
     expose:
       - 6379

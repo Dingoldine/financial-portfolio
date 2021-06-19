@@ -4,8 +4,8 @@ from io import StringIO
 import psycopg2
 import pandas as pd
 from sqlalchemy.orm import sessionmaker
-from sqlalchemy import pool, create_engine, Integer, String, Numeric, Float, Boolean, DateTime, BigInteger, text
-#import numpy as np
+from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy import create_engine, String,  Float, Boolean, DateTime, BigInteger, text
 
 
 class Database:
@@ -14,7 +14,7 @@ class Database:
         Config = configparser.ConfigParser()
         Config.read('./config.ini')
 
-        if Config['NETWORK-MODE']['localhost'] == True:
+        if Config['NETWORK-MODE']['localhost'] is True:
             Config['DATABASE']['host'] = 'localhost'
 
         self.db_config = dict(Config.items('DATABASE'))
@@ -99,7 +99,7 @@ class Database:
             """
             SELECT create_hypertable('portfolio', 'dt', if_not_exists => TRUE, migrate_data => TRUE);
             """,
-            """ 
+            """
             CREATE TABLE IF NOT EXISTS qr_table (
                 qr_code TEXT NOT NULL,
                 ts TIMESTAMP WITHOUT TIME ZONE NOT NULL
@@ -123,24 +123,25 @@ class Database:
         self.query(query)
         self.commit()
 
-    def create_table_from_df(self, json, table_name):
+    """
+        drop manually because of bug
+        see locks query
+        self.query('select pid, usename, pg_blocking_pids(pid) as blocked_by, query as blocked_query from pg_stat_activity where cardinality(pg_blocking_pids(pid)) > 0;')
+        clear locks query
+        self.query("SELECT pg_cancel_backend(pid) FROM pg_stat_activity WHERE pid <> pg_backend_pid();")
+        self.query(f'DROP TABLE IF EXISTS {tableName} CASCADE;')
+        self.commit()
+        df.reset_index(inplace=True)
+        df.rename(columns={ df.columns[0]: 'asset' }, inplace=True)
 
-        # # drop manually because of bug
-        # # see locks query
-        # self.query('select pid, usename, pg_blocking_pids(pid) as blocked_by, query as blocked_query from pg_stat_activity where cardinality(pg_blocking_pids(pid)) > 0;')
-        # # clear locks query
-        # self.query("SELECT pg_cancel_backend(pid) FROM pg_stat_activity WHERE pid <> pg_backend_pid();")
-        # self.query(f'DROP TABLE IF EXISTS {tableName} CASCADE;')
-        # self.commit()
+    """
+    def create_table_from_df(self, json, table_name):
 
         df = pd.read_json(StringIO(json), orient='index')
         df['dt'] = pd.datetime.now().date()
         df['asset_class'] = 'undefined'
         df.columns = df.columns.str.replace(
             ' ', '_').str.lower().str.replace('(', '').str.replace(')', '')
-        # df.reset_index(inplace=True)
-
-        #df.rename(columns={ df.columns[0]: 'asset' }, inplace=True)
 
         def change_type(x):
             switcher = {
@@ -181,7 +182,7 @@ class Database:
         try:
             print("executing: ", query)
             self.cursor.execute(query)
-        except:
+        except SQLAlchemyError:
             self.connection.rollback()
             raise
 
@@ -198,7 +199,7 @@ class Database:
             command = f"UPDATE portfolio SET asset_class='{item.asset_class}' WHERE asset='{item.asset}';"
             session.execute(text(command))
             session.commit()
-        except:
+        except SQLAlchemyError:
             session.rollback()
             raise
 

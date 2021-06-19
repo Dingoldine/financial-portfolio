@@ -18,7 +18,6 @@ def _parseTable(table):
     # Find number of rows and columns
     # we also find the column titles if we can
     for row in table.find_all('tr'):
-        # print(row)
         # Determine the number of rows in the table
         entry = []
 
@@ -33,7 +32,6 @@ def _parseTable(table):
                     if (a.text.strip() == "" or a.text.strip() == "Superräntan" or td.text.strip() == "Köp"):
                         pass
                     else:
-                        # print(a.text.strip())
                         entry.append(" ".join(a.text.split()))
             else:
                 if (td.text.strip() == "" or td.text.strip() == "Superräntan" or td.text.strip() == "Köp"):
@@ -71,12 +69,10 @@ def _parseHTML(data):
         for table in tables[:4]:
             captionTag = table.find('h2')
             # only parse if they have a caption
-            if(captionTag != None):
+            if(captionTag is not None):
                 caption = captionTag.text.strip()
-                # print(table.prettify())
                 headers, rows = _parseTable(table)
                 df, err = _buildDataframe(headers, rows, caption)
-                # Utils.printDf(df)
                 if(err):
                     continue
                 dataframes.update({df.name: df.to_json(orient='index')})
@@ -106,8 +102,6 @@ def _buildDataframe(headers, rows, caption):
         df["Currency"] = "SEK"
         df.drop(unnecessary_columns, axis=1, inplace=True)
         df.columns = new_column_names
-        #leftMostCol = df.columns.values[0]
-        # df.set_index(leftMostCol, inplace=True) # Turn this column to index
         return(df)
 
     def funds(headers, rows):
@@ -127,8 +121,6 @@ def _buildDataframe(headers, rows, caption):
         df["Currency"] = "SEK"
         df.drop(unnecessary_columns, axis=1, inplace=True)
         df.columns = new_column_names
-        # leftMostCol = df.columns.values[0]
-        # df.set_index(leftMostCol, inplace=True) # Turn this column to index
         return(df)
 
     def etfs(headers, rows):
@@ -146,8 +138,6 @@ def _buildDataframe(headers, rows, caption):
         df.name = "ETFs"
         df.drop(unnecessary_columns, axis=1, inplace=True)
         df.columns = new_column_names
-        # leftMostCol = df.columns.values[0]
-        # df.set_index(leftMostCol, inplace=True) # Turn this column to index
         return df
 
     def cert(headers, rows):
@@ -164,8 +154,6 @@ def _buildDataframe(headers, rows, caption):
         df.name = "Certificates"
         df.drop(unnecessary_columns, axis=1, inplace=True)
         df.columns = new_column_names
-        #leftMostCol = df.columns.values[0]
-        # df.set_index(leftMostCol, inplace=True) # Turn this column to index
         return(df)
 
     def summary(headers, rows):
@@ -237,8 +225,6 @@ def _get_fund_details(browser):
         html = BeautifulSoup(browser.page_source, 'lxml')
         # store page content
         fundDictionary.update({instrument: str(html)})
-
-        #Utils.saveTxtFile(str(html.prettify()), instrument)
 
     # go back
     browser.execute_script(f'window.history.go(-{len(fundDictionary)})')
@@ -316,15 +302,6 @@ def _loginToAvanza(url, dbModel):
         raise
 
 
-# def scrapeTEST(dbModel):
-#     # time.sleep(10)
-#     html = Utils.readTxtFile('htmlAvanza')
-#     time.sleep(5)
-#     dataframes = _parseHTML(html)
-#     print(dataframes)
-#     return dataframes
-
-
 def scrape(dbModel):
 
     login_url = 'https://www.avanza.se/start(right-overlay:login/login-overlay)'
@@ -333,9 +310,6 @@ def scrape(dbModel):
     browser = _loginToAvanza(login_url, dbModel)
 
     html = _get_portfolio(browser)
-
-    # for reuse
-    #Utils.saveTxtFile(html, 'htmlAvanza')
 
     dataframes = _parseHTML(html)
 
