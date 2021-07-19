@@ -18,4 +18,3 @@ watchdog
 fastapi
 uvicorn
 celery[redis]
-python-Levenshtein
