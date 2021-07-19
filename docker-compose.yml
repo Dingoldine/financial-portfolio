@@ -3,7 +3,7 @@ services:
   frontend:
     build: ./frontend
     ports:
-      - 8080:80
+      - 8080:8888
     depends_on:
       - backend
   timescaledb: 
@@ -14,7 +14,7 @@ services:
   backend:
     build: ./backend
     expose: 
-      - 80
+      - 8000
     depends_on:
       - timescaledb
       - worker
@@ -31,8 +31,9 @@ services:
     env_file: ./env/rabbit.env
     expose:
       - 5672
+      - 15672
   redisdb:
-    image: redis:6.2.1
+    build: ./redis
     hostname: redisdb
     volumes:
       - ./redis.conf:/redis.conf
