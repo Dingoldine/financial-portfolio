@@ -10,12 +10,8 @@ openpyxl
 xlsxwriter
 pandas-datareader
 xlrd==1.2.0
-python-dotenv 
 html5lib
 requests
-fuzzywuzzy
-watchdog
 fastapi
 uvicorn
 celery[redis]
-python-Levenshtein

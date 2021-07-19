@@ -65,7 +65,7 @@ async def startup():
 @app.on_event("shutdown")
 async def shutdown():
     print("server shutting down...")
-    await DB.disconnect()
+    DB.disconnect()
 
 
 @app.get('/getStatus/{job}')
