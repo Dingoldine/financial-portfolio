@@ -14,3 +14,10 @@ podman run --env-file="../env/rabbit.env" --hostname rabbit -p 5672:5672 -p 5671
 podman run --env-file="../env/postgres.env" -p 5432:5432 docker.io/library/postgres:latest
 
 oc adm policy add-scc-to-user anyuid -z default
+
+
+## to do: 
+
+    - use openshift secrets instead of config maps 
+    - correct currency b4 first insert, try to find symbol,
+    - get purchase_price and latest_price coming from avanza to match same currency  

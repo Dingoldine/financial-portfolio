@@ -563,11 +563,13 @@
         $.ajax({
           type: "PUT",
           url: '/portfolio/update',
+          headers: {
+            "Content-Type": "application/json",
+          },
           data: JSON.stringify(payload),
           success: function (d, status) {
             console.log(d, status)
-          },
-          dataType: 'application/json'
+          }
         });
       })
       .on('focusout', '[contenteditable]', function () {
