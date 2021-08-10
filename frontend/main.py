@@ -79,7 +79,7 @@ class Stock(BaseModel):
     market_value_sek: float
     purchase_price: float
     weight: float
-    shares: int
+    shares: float
     symbol: str
     asset_class: Optional[str]
 @app.put("/portfolio/update")

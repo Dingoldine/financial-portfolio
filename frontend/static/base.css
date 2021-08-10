@@ -107,11 +107,11 @@ table tr:hover {
   max-width: 500px;
   margin: auto; 
 }
-/*   
-  .dataTables_scrollHeadInner {
-    margin: 0 auto;
-    width: inherit !important;
-  }
+
+.dataTables_scrollHeadInner {
+  margin: auto;
+}
+  /*  
   .data-table {
     width: 100% !important;
   } */
