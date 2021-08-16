@@ -39,9 +39,9 @@ RUN pip install -r requirements.txt
 
 RUN mkdir geckodriver && cd geckodriver && touch geckodriver.log && cd ..
 
-RUN chgrp -R 0 /usr/ && chmod -R g=u /usr/
+# RUN chgrp -R 0 /usr/ && chmod -R g=u /usr/
 
-RUN chgrp -R 0 . && chmod -R g=u .
+# RUN chgrp -R 0 . && chmod -R g=u .
 
 COPY . .
 

@@ -1,249 +1,22 @@
-from bs4 import BeautifulSoup
-from selenium import webdriver
+from seleniumwire import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from helpermodules import Utils
 from scrapers._scraping_functions import clickElement, waitforload
 import constants
-import pandas as pd
-import re
-
-
-def _parseTable(table):
-    n_rows = 0
-    column_names = []
-    rows = []
-
-    # Find number of rows and columns
-    # we also find the column titles if we can
-    for row in table.find_all('tr'):
-        # Determine the number of rows in the table
-        entry = []
-
-        td_tags = row.find_all('td')
-        if len(td_tags) > 0:
-            n_rows += 1
-
-        for td in td_tags:
-            inner_links = td.find_all('a')
-            if (len(inner_links) > 0):
-                for a in inner_links:
-                    if (a.text.strip() == "" or a.text.strip() == "Superräntan" or td.text.strip() == "Köp"):
-                        pass
-                    else:
-                        entry.append(" ".join(a.text.split()))
-            else:
-                if (td.text.strip() == "" or td.text.strip() == "Superräntan" or td.text.strip() == "Köp"):
-                    pass
-                else:
-                    # number Values
-                    no_whitespace_string = re.sub(r'\s+', '', td.text.strip())
-
-                    other_comma_representation_string = no_whitespace_string.replace(
-                        ",", ".")
-
-                    entry.append(other_comma_representation_string)
-
-        # Handle column names if we find them
-        th_tags = row.find_all('th')
-        if len(th_tags) > 0 and len(column_names) == 0:
-            for th in th_tags:
-                column_names.append(th.text.strip())
-
-        # append instrument data to list
-        if len(entry) > 0:
-            rows.append(entry)
-
-    return column_names, rows
-
-
-def _parseHTML(data):
-    try:
-        soup = BeautifulSoup(data, 'lxml')
-
-        tables = soup.find_all("table", {"class": "tableV2"})
-
-        dataframes = {}
-        # we only care about the first 4 tables
-        for table in tables[:4]:
-            captionTag = table.find('h2')
-            # only parse if they have a caption
-            if(captionTag is not None):
-                caption = captionTag.text.strip()
-                headers, rows = _parseTable(table)
-                df, err = _buildDataframe(headers, rows, caption)
-                if(err):
-                    continue
-                dataframes.update({df.name: df.to_json(orient='index')})
-
-        return dataframes
-
-    except Exception as e:
-        Utils.log_error(e)
-
-
-def _buildDataframe(headers, rows, caption):
-    unnecessary_columns = ['+/- %', 'Konto', 'Tid']
-    new_column_names = ['Asset', 'Shares', 'Latest Price', 'Purchase Price',
-                        'Market Value (SEK)', 'Change', 'Profit', 'Currency']
-
-    def stocks(headers, rows):
-        # cleanup headers
-        del headers[-1]  # remove "verktyg"
-        del headers[0]  # remove buy/sell
-        # cleanup rows
-        _ = rows.pop(0)  # no need for summary row
-        for row in rows:
-            del row[0]  # remove buy
-            del row[0]  # remove sell
-        df = pd.DataFrame.from_records(rows, columns=headers)
-        df.name = "Stocks"
-        df["Currency"] = "SEK"
-        df.drop(unnecessary_columns, axis=1, inplace=True)
-        df.columns = new_column_names
-        return(df)
-
-    def funds(headers, rows):
-        # cleanup headers
-        del headers[-1]  # remove "verktyg"
-        del headers[0]  # remove buy/sell
-        # cleanup rows
-
-        _ = rows.pop(0)  # no need for buy all funds row
-        _ = rows.pop(0)  # no need for summary row
-        for row in rows:
-            del row[0]  # remove buy
-            del row[0]  # rm sell
-            del row[0]  # rm byt
-        df = pd.DataFrame.from_records(rows, columns=headers)
-        df.name = "Funds"
-        df["Currency"] = "SEK"
-        df.drop(unnecessary_columns, axis=1, inplace=True)
-        df.columns = new_column_names
-        return(df)
-
-    def etfs(headers, rows):
-        # cleanup headers
-        del headers[-1]  # remove "verktyg"
-        del headers[0]  # remove buy/sell
-        # cleanup rows
-        _ = rows.pop(0)  # no need for summary row
-        for row in rows:
-            # del row[0]  #remove buy
-            del row[0]  # rm sell
-
-        df = pd.DataFrame.from_records(rows, columns=headers)
-        df["Currency"] = "SEK"
-        df.name = "ETFs"
-        df.drop(unnecessary_columns, axis=1, inplace=True)
-        df.columns = new_column_names
-        return df
-
-    def cert(headers, rows):
-        # cleanup headers
-        del headers[-1]  # remove "verktyg"
-        del headers[0]  # remove buy/sell
-        # cleanup rows
-        _ = rows.pop(0)  # no need for summary row
-        for row in rows:
-            del row[0]  # remove buy
-            del row[0]  # rm sell
-        df = pd.DataFrame.from_records(rows, columns=headers)
-        df["Currency"] = "SEK"
-        df.name = "Certificates"
-        df.drop(unnecessary_columns, axis=1, inplace=True)
-        df.columns = new_column_names
-        return(df)
-
-    def summary(headers, rows):
-        flat_list = []
-        for index, row in enumerate(rows):
-            header = row.pop(0)
-            if index == 1:
-                header = header + ' %'
-            if index == 3:
-                header = header + ' %'
-            headers.append(header)
-
-            flat_list.append(row[0].strip("%").strip())
-        data_list = []
-        data_list.append(flat_list)
-        df = pd.DataFrame.from_records(data=data_list, columns=headers)
-        df.name = "Portfolio Summary"
-        return(df)
-
-    switcher = {
-        'Aktier': stocks,
-        'Fonder': funds,
-        2: etfs,
-        'Certifikat': cert,
-        'Summary': summary,
-    }
-
-    function = switcher.get(caption, "Invalid value")
-    if (function == 'Invalid value'):
-        return None, True
-
-    df = function(headers, rows)
-    return df, None
-
-
-def _get_fund_details(browser):
-    # wait for table to load
-    fundTableXPATH = "//table[contains(@class, 'groupInstTypeTable')][2]"
-    _ = WebDriverWait(browser, 10).until(
-        EC.presence_of_element_located((By.XPATH, fundTableXPATH))
-    )
-
-    # find all fund links
-    allLinksXPATH = "//table[contains(@class, 'groupInstTypeTable')][2]// \
-        *[contains(@class, 'instrumentName')]//*[contains(@class, 'ellipsis')]/a"
-    instrumentlinks = browser.find_elements(By.XPATH, allLinksXPATH)
-    fundDictionary = {}
-    for link in instrumentlinks:
-        fundDictionary[link.text.strip()] = link.get_attribute('href')
-
-    # navigate to each fund and get fund info
-    for instrument, href in fundDictionary.items():
-        print(instrument)
-        browser.get(href)
-
-        fundDetailsButtonXPATH = '/html/body/aza-app/div/main/div/aza-fund-guide/aza-subpage/div/div/ \
-            div/div[2]/div[1]/aza-card[2]/div/div[1]/aza-toggle-switch/aza-toggle-option[3]/button'
-
-        clickElement(browser, fundDetailsButtonXPATH, 5, extraWaitTime=3)
-
-        # wait for fund details to load
-        fundDetailsBoxXPATH = '/html/body/aza-app/div/main/div/aza-fund-guide/ \
-            aza-subpage/div/div/div/div[2]/div[1]/aza-card[2]/div/div[2]/div'
-        _ = WebDriverWait(browser, 60).until(
-            EC.visibility_of_element_located(
-                (By.XPATH, fundDetailsBoxXPATH))
-        )
-
-        html = BeautifulSoup(browser.page_source, 'lxml')
-        # store page content
-        fundDictionary.update({instrument: str(html)})
-
-    # go back
-    browser.execute_script(f'window.history.go(-{len(fundDictionary)})')
-
-    return fundDictionary
-
+import json
 
 def _get_portfolio(browser):
-    """Saves a txt file of all fund detail pages and returns portfolio view html """
-
     try:
-        browser.get(
-            "https://www.avanza.se/min-ekonomi/innehav/innehav-old.html")
+        browser.get("https://www.avanza.se/min-ekonomi/innehav.html")
+        request = browser.wait_for_request('.*positions$', 20)
 
-        # wait for javascript to load then scrape--
-        waitforload(browser, 20)
-        soup = BeautifulSoup(browser.page_source, 'lxml')
+        response = request.response
+        response_body = response.body.decode('utf-8')
+        data = json.loads(response_body)
 
-        return str(soup.prettify())
+        return parseAvanzaHoldings(data)
 
     except Exception as e:
         Utils.log_error(e)
@@ -251,6 +24,39 @@ def _get_portfolio(browser):
 
     finally:
         browser.quit()
+        
+def parseAvanzaHoldings(holdings):
+
+    asset_dict = {}
+    response = dict(holdings)
+    
+    for entry in response.get("withOrderbook"):
+
+        asset_dict[entry["instrument"]['isin']] = {
+            'asset': entry["instrument"]['name'],
+            'type': entry["instrument"]['type'],
+            'isin': entry["instrument"]['isin'],
+            'currency': entry["instrument"]['currency'],
+            'price': entry["instrument"]['orderbook']['quote']['latest']['value'],
+            'shares':  entry['volume']['value'],
+            'value': entry['value']['value'],
+            'acquired_value': entry['acquiredValue']['value']
+        }
+    
+    totalBalanceSEK = 0
+    for position in response.get('cashPositions'):
+        
+        totalBalanceSEK += position['totalBalance']['value'] if position['totalBalance']['unit'] == 'SEK' else 0
+    
+    asset_dict['CASH'] = {
+        'asset': 'Cash',
+        'type': 'CASH',
+        'value': totalBalanceSEK,
+        'acquired_value': totalBalanceSEK,
+        'currency': 'SEK',
+    }
+
+    return asset_dict
 
 
 def _loginToAvanza(url, dbModel):
@@ -258,15 +64,17 @@ def _loginToAvanza(url, dbModel):
     try:
         opt = webdriver.FirefoxOptions()
         fp = webdriver.FirefoxProfile()
-
+        fp.set_preference('browser.cache.disk.parent_directory', '/usr/')
         opt.add_argument('-headless')
+        opt.add_argument('--disable-gpu')
         opt.profile = fp
+
+        browser = None
 
         browser = webdriver.Firefox(
             options=opt, service_log_path=constants.GECKO_LOG_PATH, executable_path=constants.GECKO_EXECUTABLE_PATH)
-        # poll for elements for --  seconds max, before shutdown
+
         browser.implicitly_wait(0)
-        wait = WebDriverWait(browser, 60)
 
         browser.get(url)
 
@@ -291,26 +99,19 @@ def _loginToAvanza(url, dbModel):
             "return arguments[0].toDataURL('image/png');", qrCodeElement)
         dbModel.store_qr_code(canvasDataURL)
 
-        # wait until logged in view found
-        sideMenuXPATH = "/html/body/aza-app/div/aza-personal-menu/div/nav"
-        wait.until(EC.presence_of_element_located((By.XPATH, sideMenuXPATH)))
+        waitforload(browser, 30)
 
         return browser
     except Exception as e:
         Utils.log_error(e)
-        browser.quit()
+        if browser is not None:
+            browser.quit()
         raise
 
-
-def scrape(dbModel):
-
+def scrape(dbModel) -> dict:
     login_url = 'https://www.avanza.se/start(right-overlay:login/login-overlay)'
-
-    # login and get new data
     browser = _loginToAvanza(login_url, dbModel)
+    return  _get_portfolio(browser)
 
-    html = _get_portfolio(browser)
+    # return json.loads(open("./scrapers/avanza_holdings.json").read())
 
-    dataframes = _parseHTML(html)
-
-    return dataframes

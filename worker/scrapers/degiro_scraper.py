@@ -16,15 +16,11 @@ PASSWORD = Config["DEGIRO"]["password"]
 
 
 def parseResponse(res: Response, s: Session):
-    print("####### COOKIES #######")
-    print(json.dumps(s.cookies.get_dict(), indent=2))
-    print("####### RESPONSE HEADERS #######")
-    print(json.dumps(dict(res.headers), indent=2))
+    
     splitContentType = res.headers.get('content-type').split(";")
+
     if (splitContentType[0] == 'application/json'):
-        print("####### RESPONSE CONTENT #######")
         data = eval(res.text.replace('true', 'True').replace('false', 'False'))
-        print(json.dumps(data, indent=2))
         return data
     else:
         return {}
@@ -34,10 +30,6 @@ def checkError(res: Response):
     if not (res.status_code == 200):
         print(f'REQUEST ERROR: \n Code {res.status_code},\nReason: \n {res.reason}')
         raise HTTPError
-
-
-def printSession(s: Session):
-    print(json.dumps(dict(s.headers), indent=2))
 
 
 def extractSessionID(s: Session):
@@ -116,6 +108,10 @@ def parsePortfolio(data: Dict):
     return list(d.keys()), positionsDict
 
 
+def local():
+    with open("./scrapers/degiro_holdings.json") as file:
+        return json.loads(file.read())
+
 def scrape():
     try:
         with requests.Session() as session:
@@ -130,7 +126,7 @@ def scrape():
 
             session.headers.update(request_headers)
 
-            print(json.dumps(session.cookies.get_dict(), indent=2))
+            #  print(json.dumps(session.cookies.get_dict(), indent=2))
 
             res = session.get(f'{BASE_URL}/login/se', headers=request_headers)
             checkError(res)
