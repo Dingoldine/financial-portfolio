@@ -15,9 +15,7 @@ SERVER_HOST_ADDRESS = "localhost:8080" if Config['NETWORK-MODE']['localhost'] is
 app = FastAPI()
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
-
 templates = Jinja2Templates(directory="static")
-
 
 @app.on_event("startup")
 def startup():
@@ -74,14 +72,14 @@ class Stock(BaseModel):
     asset: str
     change: float
     currency: str
-    isin: str
-    latest_price: float
+    isin: Optional[str]
+    latest_price: Optional[float]
     market_value_sek: float
-    purchase_price: float
+    purchase_price: Optional[float]
     weight: float
-    shares: float
-    symbol: str
-    asset_class: Optional[str]
+    shares: Optional[float]
+    symbol: Optional[str]
+    asset_class: str
 @app.put("/portfolio/update")
 def update_stock(stock: Stock, response_model=Stock):
     print(stock.dict())

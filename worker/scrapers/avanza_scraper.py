@@ -6,6 +6,9 @@ from helpermodules import Utils
 from scrapers._scraping_functions import clickElement, waitforload
 import constants
 import json
+from seleniumwire.utils import decode
+
+
 
 def _get_portfolio(browser):
     try:
@@ -13,7 +16,9 @@ def _get_portfolio(browser):
         request = browser.wait_for_request('.*positions$', 20)
 
         response = request.response
-        response_body = response.body.decode('utf-8')
+
+        response_body = decode(response.body, response.headers.get('Content-Encoding', 'identity'))
+        
         data = json.loads(response_body)
 
         return parseAvanzaHoldings(data)
@@ -78,7 +83,7 @@ def _loginToAvanza(url, dbModel):
 
         browser.get(url)
 
-        acceptCookiesButtonXPATH = "/html/body/aza-app/div/aza-cookie-message/div/div[1]/div/button"
+        acceptCookiesButtonXPATH = "/html/body/aza-app/div/aza-cookie-message/div/div/button"
 
         loginButtonXPATH = "/html/body/aza-app/aza-right-overlay-area/aside/ng-component/aza-login-overlay/aza-right-overlay-template/main/aza-login/aza-toggle-switch-view/div/aza-bank-id/div[1]/button[1]"
 

@@ -104,14 +104,14 @@ class Stock(BaseModel):
     asset: str
     change: float
     currency: str
-    isin: str
-    latest_price: float
+    isin: Optional[str]
+    latest_price: Optional[float]
     market_value_sek: float
-    purchase_price: float
+    purchase_price: Optional[float]
     weight: float
-    shares: float
-    symbol: str
-    asset_class: Optional[str]
+    shares: Optional[float]
+    symbol: Optional[str]
+    asset_class: str
 @app.put('/updateStock')
 def update_stock(stock: Stock, db_session: Session = Depends(get_db)):
     print(stock)

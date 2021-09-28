@@ -62,7 +62,7 @@ class Database:
             """
             CREATE TABLE IF NOT EXISTS portfolio (
                 id SERIAL,
-                dt DATE NOT NULL,
+                dt DATE DEFAULT CURRENT_DATE,
                 asset VARCHAR(255) NOT NULL,
                 symbol VARCHAR(255),
                 shares NUMERIC,
@@ -123,22 +123,10 @@ class Database:
         self.query(query)
         self.commit()
 
-    """
-        drop manually because of bug
-        see locks query
-        self.query('select pid, usename, pg_blocking_pids(pid) as blocked_by, query as blocked_query from pg_stat_activity where cardinality(pg_blocking_pids(pid)) > 0;')
-        clear locks query
-        self.query("SELECT pg_cancel_backend(pid) FROM pg_stat_activity WHERE pid <> pg_backend_pid();")
-        self.query(f'DROP TABLE IF EXISTS {tableName} CASCADE;')
-        self.commit()
-        df.reset_index(inplace=True)
-        df.rename(columns={ df.columns[0]: 'asset' }, inplace=True)
-
-    """
     def create_table_from_df(self, json, table_name):
 
         df = pd.read_json(StringIO(json), orient='index')
-        df['dt'] = pd.datetime.now().date()
+        # df['dt'] = pd.datetime.now().date()
         df['asset_class'] = 'undefined'
         df.columns = df.columns.str.replace(
             ' ', '_').str.lower().str.replace('(', '').str.replace(')', '')
@@ -149,7 +137,7 @@ class Database:
                 'f': Float(),
                 'O': String(),
                 'b': Boolean(),
-                'M': DateTime()
+                # 'M': DateTime()
             }
             return switcher.get(x.kind)
 

@@ -558,6 +558,9 @@
         })
         let payload = {}
         for (let i = 0; i < data_headers.length; i++) {
+          if (updatedportfolioRow[i] == "None") {
+            continue
+          }
           payload[data_headers[i]] = updatedportfolioRow[i]
         }
         $.ajax({

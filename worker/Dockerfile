@@ -8,6 +8,8 @@ RUN apt-get update && \
   libvdpau1 libvorbis0a libvorbisenc2 libvpx5 libwavpack1 libx264-155 libxcb-xfixes0 libegl-mesa0 libegl1-mesa \
   libxvidcore4 libzvbi-common libzvbi0 mesa-va-drivers mesa-vdpau-drivers va-driver-all vdpau-driver-all libpci-dev
 
+RUN apt --assume-yes full-upgrade 
+
 # install firefox and geckodriver
 RUN GECKODRIVER_VERSION=`curl https://github.com/mozilla/geckodriver/releases/latest | grep -Po 'v[0-9]+.[0-9]+.[0-9]+'` && \
     wget https://github.com/mozilla/geckodriver/releases/download/$GECKODRIVER_VERSION/geckodriver-$GECKODRIVER_VERSION-linux64.tar.gz && \
