@@ -75,6 +75,14 @@ h1, h2, h3, h4, h5, h6 {
   transform: translate(0, 0);
 }
 
+#total-value {
+  line-height: 24px;
+  font-variant-numeric: slashed-zero;
+  font-size: smaller;
+  text-transform: lowercase;
+  text-align: center;
+}
+
 .treemap-svg {
   min-width: 80%;
   min-height: 80%;

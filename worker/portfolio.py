@@ -15,8 +15,8 @@ class Portfolio:
         avanza_frame.columns = [col_dict.get(x, x) for x in avanza_frame.columns]
         avanza_frame['Change'] = (avanza_frame['Market Value (SEK)']/avanza_frame['Acquired_value']) - 1 
         avanza_frame.drop("Acquired_value", axis=1, inplace=True)
-        avanza_frame['Purchase Price'] = avanza_frame['Latest Price'] /  avanza_frame['Change']
-        avanza_frame['Profit'] = avanza_frame['Market Value (SEK)'] * avanza_frame['Change'] - 1
+        avanza_frame['Purchase Price'] = avanza_frame['Latest Price'] / (avanza_frame['Change'] + 1)
+        avanza_frame['Profit'] = avanza_frame['Market Value (SEK)'] * (avanza_frame['Change'])
 
         avanza_stocks = avanza_frame[avanza_frame["Type"] == "STOCK"]
         avanza_stocks.drop("Type", axis=1, inplace=True)

@@ -64,7 +64,8 @@ def clean(d: Dict):
         "vwdIdSecondary",
         "category",
         "closePrice",
-        "closePriceDate"
+        "closePriceDate",
+        "active"
         ]
 
     positionsToDrop = []

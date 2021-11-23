@@ -12,6 +12,10 @@
     </div>
   </article>
   <article class="col-md-4 align-self-center">
+    <h6>Portfolio Value</h6>
+    <div id="total-value-container">
+      <h6 id="total-value"></h6>
+    </div>
     <h6>Currency Exposure</h6>
     <div class="graph-wrapper donut-wrapper">
       <div id="donut"></div>
@@ -65,6 +69,13 @@
   const data_headers = {{ portfolio_headers | tojson }}
 
   const portfolio_performance = {{ portfolio_performance | tojson }}
+
+
+  const portfolio_value = data.reduce((total, x) => (total + x.market_value_sek), 0).toLocaleString() + ' kr';
+
+  let total_value_element = document.getElementById("total-value");
+
+  total_value_element.innerText = portfolio_value;
 
   const build_treemap = () => {
     // set the dimensions and margins of the graph
@@ -296,7 +307,7 @@
     // div to show on hover 
     const tooltipdiv = d3.select("body").append("div")
       .attr("class", "tooltip")
-
+    
     // Build the pie chart: Basically, each part of the pie is a path that we build using the arc function.
     svg
       .selectAll('allSlices')
