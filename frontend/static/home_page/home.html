@@ -71,11 +71,9 @@
   const portfolio_performance = {{ portfolio_performance | tojson }}
 
 
-  const portfolio_value = data.reduce((total, x) => (total + x.market_value_sek), 0).toLocaleString() + ' kr';
+  const portfolio_value = data.reduce((total, x) => (total + x.market_value_sek), 0);
 
   let total_value_element = document.getElementById("total-value");
-
-  total_value_element.innerText = portfolio_value;
 
   const build_treemap = () => {
     // set the dimensions and margins of the graph
@@ -292,11 +290,13 @@
       .value(function (d) {
         return d[1];
       })
+      .startAngle(1.1*Math.PI)
+      .endAngle(3.1*Math.PI)
 
     const data_ready = pie(groupByCurrency.entries())
     // The arc generator
     const arc = d3.arc()
-      .innerRadius(radius * 0.5) // This is the size of the donut hole
+      .innerRadius(radius * 0.6) // This is the size of the donut hole
       .outerRadius(radius * 0.8)
 
     // Another arc that won't be drawn. Just for labels positioning
@@ -307,8 +307,15 @@
     // div to show on hover 
     const tooltipdiv = d3.select("body").append("div")
       .attr("class", "tooltip")
+
+    const tweenPie = (b) =>  {
+      var i = d3.interpolate({startAngle: 1.1*Math.PI, endAngle: 1.1*Math.PI}, b);
+      return function(t) { return arc(i(t)); };
+    }
+
     
     // Build the pie chart: Basically, each part of the pie is a path that we build using the arc function.
+    const path =
     svg
       .selectAll('allSlices')
       .data(data_ready)
@@ -347,49 +354,86 @@
           .style("opacity", 0);
       })
 
-    // Add the polylines between chart and labels:
-    svg
-      .selectAll('allPolylines')
+    path      
+      .transition()
+      .delay(0)
+      .duration(2000)
+      .ease(d3.easeExpInOut)
+      .attrTween("d", tweenPie);
+
+    // // Add the polylines between chart and labels:
+    // svg
+    //   .selectAll('allPolylines')
+    //   .data(data_ready)
+    //   .enter()
+    //   .append('polyline')
+    //   .attr("stroke", "grey")
+    //   .style("fill", "none")
+    //   .attr("stroke-width", '0.2%')
+    //   .attr('points', function (d) {
+    //     const posA = arc.centroid(d) // line insertion in the slice
+    //     const posB = outerArc.centroid(
+    //       d) // line break: we use the other arc generator that has been built only for that
+    //     const posC = outerArc.centroid(d); // Label position = almost the same as posB
+    //     const midangle = d.startAngle + (d.endAngle - d.startAngle) / 2 // we need the angle to see if the X position will be at the extreme right or extreme left
+    //     posC[0] = radius * 0.95 * (midangle < Math.PI ? 1 : -1); // multiply by 1 or -1 to put it on the right or on the left
+    //     return [posA, posB, posC]
+    //   })
+
+    // // Add the polylines between chart and labels:
+    // svg
+    //   .selectAll('allLabels')
+    //   .data(data_ready)
+    //   .enter()
+    //   .append('text')
+    //   .text(function (d) {
+    //     return d.data[0]
+    //   })
+    //   .attr('transform', function (d) {
+    //     const pos = outerArc.centroid(d);
+    //     const midangle = d.startAngle + (d.endAngle - d.startAngle) / 2
+    //     pos[0] = radius * 0.96 * (midangle < Math.PI ? 1 : -1);
+    //     return 'translate(' + pos + ')';
+    //   })
+    //   .attr("dy", 4)
+    //   .style('text-anchor', function (d) {
+    //     const midangle = d.startAngle + (d.endAngle - d.startAngle) / 2
+    //     return (midangle < Math.PI ? 'start' : 'end')
+    //   })
+    //   .attr('fill', 'grey');
+
+    console.log(data_ready)
+    const legend = svg
+      .append('g')
+      .attr('transform', `translate(${radius - 100},${radius - 100})`);
+    
+    labelHeight = 18
+
+    legend
+      .selectAll(null)
       .data(data_ready)
       .enter()
-      .append('polyline')
-      .attr("stroke", "grey")
-      .style("fill", "none")
-      .attr("stroke-width", '0.2%')
-      .attr('points', function (d) {
-        const posA = arc.centroid(d) // line insertion in the slice
-        const posB = outerArc.centroid(
-          d) // line break: we use the other arc generator that has been built only for that
-        const posC = outerArc.centroid(d); // Label position = almost the same as posB
-        const midangle = d.startAngle + (d.endAngle - d.startAngle) /
-          2 // we need the angle to see if the X position will be at the extreme right or extreme left
-        posC[0] = radius * 0.95 * (midangle < Math.PI ? 1 : -
-        1); // multiply by 1 or -1 to put it on the right or on the left
-        return [posA, posB, posC]
-      })
-
-    // Add the polylines between chart and labels:
-    svg
-      .selectAll('allLabels')
+      .append('rect')
+      .attr('y', d => labelHeight * d.index * 1.8)
+      .attr('width', labelHeight)
+      .attr('height', labelHeight)
+      .attr('fill', d => color(d.data[0]))
+      .attr('stroke', 'grey')
+      .style('stroke-width', '1px');
+      
+    legend
+      .selectAll(null)
       .data(data_ready)
       .enter()
       .append('text')
-      .text(function (d) {
-        return d.data[0]
-      })
-      .attr('transform', function (d) {
-        const pos = outerArc.centroid(d);
-        const midangle = d.startAngle + (d.endAngle - d.startAngle) / 2
-        pos[0] = radius * 0.96 * (midangle < Math.PI ? 1 : -1);
-        return 'translate(' + pos + ')';
-      })
-      .attr("dy", 4)
-      .style('text-anchor', function (d) {
-        const midangle = d.startAngle + (d.endAngle - d.startAngle) / 2
-        return (midangle < Math.PI ? 'start' : 'end')
-      })
-      .attr('fill', 'grey');
-  };
+      .text(d => d.data[0])
+      .attr('x', labelHeight * 1.2)
+      .attr('y', d => labelHeight * d.index * 1.8 + labelHeight)
+      .style('font-family', 'sans-serif')
+      .style('font-size', `${labelHeight}px`);
+
+    };
+  
 
   const build_stacked_area_chart = () => {
     // format data
@@ -599,12 +643,45 @@
       "scrollX": true
     });
 
+    const animate_portfolio_value = (obj, start, end, duration) => {
+  // assumes integer values for start and end
+    var range = end - start;
+    // no timer shorter than 50ms (not really visible any way)
+    var minTimer = 50;
+    // calc step time to show all interediate values
+    var stepTime = Math.abs(Math.floor(duration / range));
+    
+    // never go below minTimer
+    stepTime = Math.max(stepTime, minTimer);
+    
+    // get current time and calculate desired end time
+    var startTime = new Date().getTime();
+    var endTime = startTime + duration;
+    var timer;
+
+    function run() {
+        var now = new Date().getTime();
+        var remaining = Math.max((endTime - now) / duration, 0);
+        var value = Math.round(end - (remaining * range));
+        obj.innerText = value.toLocaleString()  + ' kr';
+        if (value == end) {
+            clearInterval(timer);
+        }
+    }
+    
+    timer = setInterval(run, stepTime);
+    run();
+  }
+
 
     build_treemap()
 
     build_stacked_area_chart()
 
     build_donut_chart()
+
+    animate_portfolio_value(total_value_element, 100000, portfolio_value, 2000);
+
   });
 </script>
 {% endblock %}
